@@ -3,13 +3,15 @@
 
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>词汇闯关 · VocaQuest Campus</title>
     <link href="https://fonts.googleapis.com/css2?family=Press+Start+2P&display=swap" rel="stylesheet">
     <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/mammoth/1.6.0/mammoth.browser.min.js"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.min.js"></script>
+    <link rel="stylesheet" href="./theme.css">
+    <script src="./theme.js"></script>
     <style>
         /* ══════════════ 100% 继承 index-claude原版.html CSS ══════════════ */
         * {
@@ -30,7 +32,7 @@
             --red: #ff4444;
             --purple: #b57bee;
             --text: #ffffff;
-            --dim: #707090;
+            --dim: #a0a0ba;
             --px: 'Press Start 2P', monospace;
             --fs-px-xl: clamp(16px, 3.5vw, 28px);
             --fs-px-lg: clamp(11px, 2.2vw, 16px);
@@ -343,6 +345,456 @@
             gap: var(--gap-md);
         }
 
+        .journey-panel {
+            width: 100%;
+            max-width: 1120px;
+            background: var(--panel);
+            border: 1px solid var(--border);
+            border-radius: 6px;
+            padding: clamp(14px, 2.5vw, 20px);
+        }
+
+        .journey-head {
+            display: flex;
+            align-items: flex-start;
+            justify-content: space-between;
+            gap: 12px;
+            margin-bottom: 14px;
+        }
+
+        .journey-kicker {
+            font-family: var(--px);
+            font-size: 7px;
+            letter-spacing: 2px;
+            color: var(--cyan);
+            margin-bottom: 6px;
+        }
+
+        .journey-summary {
+            color: var(--dim);
+            font-size: 13px;
+            line-height: 1.6;
+        }
+
+        .journey-percent {
+            font-family: var(--px);
+            font-size: clamp(12px, 2vw, 16px);
+            color: var(--gold);
+            white-space: nowrap;
+        }
+
+        .map-legend {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 8px 14px;
+            color: var(--dim);
+            font-size: 11px;
+            margin-bottom: 10px;
+        }
+
+        .map-legend span {
+            display: inline-flex;
+            align-items: center;
+            gap: 5px;
+        }
+
+        .map-legend i {
+            width: 9px;
+            height: 9px;
+            border-radius: 50%;
+            border: 1px solid var(--border);
+            background: var(--bg);
+        }
+
+        .map-legend .available i { border-color: var(--cyan); }
+        .map-legend .recommended i { border-color: var(--gold); background: rgba(255, 215, 0, .24); }
+        .map-legend .done i { border-color: var(--green); background: rgba(78, 255, 145, .24); }
+        .map-legend .missed i { border-color: var(--dim); background: rgba(128, 128, 128, .12); }
+
+        .story-hud {
+            display: grid;
+            grid-template-columns: minmax(230px, 1.1fr) minmax(260px, 1.4fr);
+            margin-bottom: 14px;
+            border: 1px solid var(--border);
+            border-radius: 6px;
+            background: var(--panel);
+            overflow: hidden;
+        }
+
+        .story-scene {
+            min-height: 210px;
+            overflow: hidden;
+            border-right: 1px solid var(--border);
+            background: #07111f;
+        }
+
+        .story-scene-art {
+            position: relative;
+            width: 100%;
+            height: 100%;
+            min-height: 210px;
+            background-size: 230% auto;
+            background-repeat: no-repeat;
+            overflow: hidden;
+        }
+
+        .story-scene-shade {
+            position: absolute;
+            inset: 0;
+            background:
+                linear-gradient(180deg, rgba(2, 7, 14, .08) 42%, rgba(2, 7, 14, .88) 100%),
+                linear-gradient(90deg, transparent 55%, rgba(2, 7, 14, .34));
+            pointer-events: none;
+        }
+
+        .story-scene-chapter {
+            position: absolute;
+            top: 12px;
+            left: 12px;
+            padding: 7px 9px;
+            border: 1px solid rgba(255, 226, 142, .65);
+            background: rgba(9, 14, 20, .78);
+            color: #ffe28e;
+            font-family: var(--px);
+            font-size: 6px;
+            letter-spacing: 1px;
+            z-index: 3;
+        }
+
+        .story-scene-caption {
+            position: absolute;
+            right: 12px;
+            bottom: 12px;
+            left: 12px;
+            color: #fff7dc;
+            font-size: 13px;
+            font-weight: 700;
+            line-height: 1.45;
+            text-shadow: 0 2px 7px rgba(0, 0, 0, .9);
+            z-index: 3;
+        }
+
+        .story-hud-copy {
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            gap: 8px;
+            padding: 16px;
+        }
+
+        .story-world-name {
+            font-family: var(--px);
+            font-size: clamp(9px, 1.5vw, 13px);
+            line-height: 1.6;
+            color: var(--gold);
+        }
+
+        .story-objective {
+            font-size: 13px;
+            line-height: 1.75;
+            color: var(--dim);
+        }
+
+        .story-hero-strip {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            padding-top: 7px;
+            border-top: 1px dashed var(--border);
+        }
+
+        .story-hero-avatar {
+            width: 48px;
+            height: 48px;
+            flex: 0 0 48px;
+            border: 1px solid var(--gold);
+            border-radius: 50%;
+            background: #17130e;
+            overflow: hidden;
+        }
+
+        .story-hero-portrait {
+            width: 100%;
+            height: 100%;
+            background-size: 330% auto;
+            background-position-y: 20%;
+        }
+
+        .hero-empty {
+            display: grid;
+            place-items: center;
+            width: 100%;
+            height: 100%;
+            color: var(--dim);
+        }
+
+        .story-hero-meta { min-width: 0; flex: 1; }
+        .story-hero-meta strong { display: block; color: var(--text); font-size: 13px; }
+        .story-hero-meta span { display: block; margin-top: 2px; color: var(--dim); font-size: 11px; line-height: 1.5; }
+
+        .world-map-viewport {
+            width: 100%;
+            overflow-x: auto;
+            overflow-y: hidden;
+            overscroll-behavior-inline: contain;
+            touch-action: pan-y pinch-zoom;
+            -webkit-overflow-scrolling: touch;
+            scrollbar-color: var(--border) var(--bg);
+            border: 1px solid var(--border);
+            border-radius: 6px;
+            background: #07111f;
+            box-shadow: 0 18px 40px rgba(0, 0, 0, .2);
+        }
+
+        .world-map {
+            position: relative;
+            width: 100%;
+            aspect-ratio: 16 / 9;
+            isolation: isolate;
+            background-color: #07111f;
+            background-size: cover;
+            background-position: center;
+            background-repeat: no-repeat;
+        }
+
+        .world-map.vq-generated-map-art {
+            background-size: 124% auto;
+            background-position: center 45%;
+        }
+        .vq-art-mark-cover{position:absolute;right:0;bottom:0;z-index:8;width:86px;height:28px;background:rgba(4,9,16,.94);pointer-events:none}
+
+        .world-map-vignette {
+            position: absolute;
+            inset: 0;
+            z-index: 0;
+            background:
+                radial-gradient(circle at 50% 46%, transparent 58%, rgba(1, 5, 12, .35) 100%),
+                linear-gradient(180deg, rgba(1, 5, 12, .16), transparent 18%, transparent 78%, rgba(1, 5, 12, .38));
+            pointer-events: none;
+        }
+
+        .world-map-titleplate {
+            position: absolute;
+            top: 2.2%;
+            left: 1.4%;
+            z-index: 5;
+            display: flex;
+            align-items: center;
+            gap: 9px;
+            padding: 8px 10px;
+            border: 1px solid rgba(255, 226, 142, .55);
+            border-radius: 4px;
+            background: rgba(7, 12, 18, .82);
+            color: #fff1bd;
+            box-shadow: 0 5px 18px rgba(0, 0, 0, .35);
+        }
+
+        .world-map-titleplate strong { font-family: var(--px); font-size: 7px; letter-spacing: .8px; }
+        .world-map-titleplate span { font-size: 10px; color: rgba(255, 255, 255, .72); }
+
+        .world-map-lines {
+            position: absolute;
+            inset: 0;
+            width: 100%;
+            height: 100%;
+            z-index: 2;
+            pointer-events: none;
+            overflow: visible;
+            filter: drop-shadow(0 2px 2px rgba(0, 0, 0, .85));
+        }
+
+        .world-map-line {
+            fill: none;
+            stroke: rgba(239, 235, 209, .38);
+            stroke-width: 5;
+            stroke-linecap: round;
+            stroke-dasharray: 9 12;
+        }
+
+        .world-map-line.done { stroke: #83e6a3; stroke-dasharray: none; }
+        .world-map-line.available { stroke: #69d5ff; }
+        .world-map-line.recommended { stroke: #ffe28e; stroke-width: 7; }
+        .world-map-line.missed { stroke: rgba(195, 202, 208, .3); opacity: .3; }
+
+        .world-node {
+            position: absolute;
+            width: clamp(31px, 3.7vw, 48px);
+            aspect-ratio: 1;
+            transform: translate(-50%, -50%);
+            border: 3px solid rgba(236, 231, 202, .72);
+            border-radius: 50%;
+            padding: 0;
+            background: rgba(12, 19, 26, .94);
+            color: #fff6d2;
+            text-align: center;
+            cursor: pointer;
+            z-index: 4;
+            box-shadow: 0 4px 0 rgba(0, 0, 0, .5), 0 7px 16px rgba(0, 0, 0, .42);
+            transition: transform .16s ease, border-color .16s ease, opacity .16s ease, box-shadow .16s ease;
+        }
+
+        .world-node:hover:not(:disabled),
+        .world-node:focus-visible { transform: translate(-50%, -58%) scale(1.08); z-index: 10; }
+        .world-node:disabled { cursor: not-allowed; opacity: .48; }
+        .world-node.available { border-color: #69d5ff; color: #dff8ff; }
+        .world-node.choice { border-color: #d8a4ff; color: #f1ddff; box-shadow: 0 0 0 4px rgba(181, 123, 238, .18), 0 7px 16px rgba(0, 0, 0, .5); }
+        .world-node.recommended { border-color: #ffe28e; color: #ffe28e; box-shadow: 0 0 0 5px rgba(255, 226, 142, .2), 0 0 24px rgba(255, 210, 80, .48); }
+        .world-node.done { border-color: #83e6a3; color: #83e6a3; background: rgba(7, 46, 34, .94); }
+        .world-node.missed {
+            border-style: dotted;
+            opacity: .36;
+            filter: grayscale(1);
+            cursor: default;
+        }
+
+        .world-node.route-a::before,
+        .world-node.route-b::before {
+            position: absolute;
+            left: 50%;
+            top: -13px;
+            transform: translateX(-50%);
+            font-family: var(--px);
+            font-size: 5px;
+            color: #fff8dc;
+            text-shadow: 0 1px 4px #000;
+        }
+
+        .world-node.route-a::before { content: 'A'; }
+        .world-node.route-b::before { content: 'B'; }
+        .world-node-icon { display: grid; place-items: center; width: 100%; height: 100%; font-family: var(--px); font-size: clamp(7px, 1vw, 11px); }
+        .world-node-state {
+            position: absolute;
+            top: -7px;
+            right: -7px;
+            display: grid;
+            place-items: center;
+            min-width: 17px;
+            height: 17px;
+            padding: 0 3px;
+            border: 1px solid rgba(255, 255, 255, .55);
+            border-radius: 9px;
+            background: #0a1119;
+            color: #fff;
+            font-size: 9px;
+        }
+
+        .world-node-card {
+            position: absolute;
+            left: 50%;
+            bottom: calc(100% + 12px);
+            width: 170px;
+            transform: translate(-50%, 6px);
+            padding: 10px;
+            border: 1px solid rgba(255, 226, 142, .55);
+            border-radius: 5px;
+            background: rgba(7, 12, 18, .94);
+            color: #fff7dc;
+            text-align: left;
+            opacity: 0;
+            visibility: hidden;
+            pointer-events: none;
+            transition: opacity .15s, transform .15s;
+            box-shadow: 0 10px 26px rgba(0, 0, 0, .55);
+        }
+
+        .world-node-card strong { display: block; font-size: 12px; line-height: 1.45; }
+        .world-node-card span { display: block; margin-top: 4px; color: rgba(255, 255, 255, .65); font-size: 10px; line-height: 1.45; }
+        .world-node:hover .world-node-card,
+        .world-node:focus-visible .world-node-card,
+        .world-node.current .world-node-card,
+        .world-node.recommended .world-node-card {
+            transform: translate(-50%, 0);
+            opacity: 1;
+            visibility: visible;
+        }
+
+        .world-player {
+            position: absolute;
+            right: -24px;
+            bottom: -16px;
+            width: 38px;
+            height: 38px;
+            border: 2px solid #ffe28e;
+            border-radius: 50%;
+            background-color: #19130a;
+            background-size: 330% auto;
+            background-position-y: 18%;
+            box-shadow: 0 0 0 3px rgba(255, 226, 142, .28), 0 5px 12px rgba(0, 0, 0, .65);
+        }
+
+        .hero-art {
+            display: block;
+            background-image: url('./assets/story/heroes.jpg');
+            background-repeat: no-repeat;
+        }
+
+        .hero-aria { background-position-x: 0%; }
+        .hero-noah { background-position-x: 50%; }
+        .hero-sora { background-position-x: 100%; }
+        .story-scene-character {
+            position: absolute;
+            right: 3%;
+            bottom: -42%;
+            width: 42%;
+            height: 142%;
+            background-size: 300% auto;
+            background-position-y: top;
+            filter: drop-shadow(0 5px 7px rgba(0, 0, 0, .8));
+            z-index: 2;
+        }
+
+        .journey-next {
+            margin-top: 4px;
+            padding: 12px;
+            border-left: 3px solid var(--purple);
+            background: rgba(181, 123, 238, .06);
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            gap: 12px;
+        }
+
+        .journey-next-copy {
+            color: var(--dim);
+            font-size: 13px;
+            line-height: 1.7;
+        }
+
+        .journey-next-copy strong {
+            display: block;
+            color: var(--text);
+            margin-bottom: 2px;
+        }
+
+        @media (max-width: 560px) {
+            .journey-next {
+                align-items: stretch;
+                flex-direction: column;
+            }
+
+            .journey-next .btn {
+                width: 100%;
+            }
+
+            .world-map-viewport {
+                overflow-x: auto;
+                cursor: grab;
+                touch-action: pan-y pinch-zoom;
+                overscroll-behavior-x: contain;
+                -webkit-overflow-scrolling: touch;
+            }
+            .world-map-viewport.dragging { cursor: grabbing; user-select: none; }
+            .world-node { width: 38px; }
+            .world-map-titleplate span { display: none; }
+            .world-node-card { width: 150px; }
+            .story-hud,
+            .story-result-panel.visible { grid-template-columns: 1fr; }
+            .story-scene,
+            .story-result-scene { border-right: 0; border-bottom: 1px solid var(--border); }
+            .hero-choice-grid,
+            .story-choice-grid { grid-template-columns: 1fr; }
+        }
+
         .map-grid {
             display: flex;
             flex-wrap: wrap;
@@ -350,6 +802,148 @@
             justify-content: center;
             max-width: 760px;
             width: 100%;
+        }
+
+        .legacy-levels {
+            width: 100%;
+            max-width: 760px;
+            border: 1px solid var(--border);
+            border-radius: 6px;
+            padding: 10px;
+        }
+
+        .legacy-levels summary {
+            cursor: pointer;
+            color: var(--dim);
+            font-size: 12px;
+            text-align: center;
+        }
+
+        .legacy-levels .map-grid {
+            margin-top: 14px;
+        }
+
+        .teacher-map-preview {
+            display: flex;
+            flex-direction: column;
+            gap: 10px;
+            max-height: 52vh;
+            overflow-y: auto;
+            padding-right: 4px;
+        }
+
+        .teacher-map-stage {
+            display: grid;
+            grid-template-columns: 90px 1fr 1fr;
+            gap: 8px;
+            align-items: center;
+        }
+
+        .teacher-map-stage > div {
+            border: 1px solid var(--border);
+            border-radius: 5px;
+            padding: 10px;
+            font-size: 12px;
+        }
+
+        .teacher-map-stage .memory { border-color: rgba(78, 255, 145, .4); color: var(--green); }
+        .teacher-map-stage .sound { border-color: rgba(0, 212, 255, .4); color: var(--cyan); }
+        .teacher-map-stage .spelling { border-color: rgba(255, 140, 66, .4); color: var(--orange); }
+        .teacher-map-stage .story-main { border-color: rgba(255, 215, 0, .4); color: var(--gold); }
+        .teacher-map-stage .story-a { border-color: rgba(0, 212, 255, .4); color: var(--cyan); }
+        .teacher-map-stage .story-b { border-color: rgba(181, 123, 238, .4); color: var(--purple); }
+
+        .hero-choice-grid {
+            display: grid;
+            grid-template-columns: repeat(3, minmax(0, 1fr));
+            gap: 10px;
+            margin: 14px 0;
+        }
+
+        .hero-choice {
+            min-width: 0;
+            padding: 0;
+            border: 2px solid var(--border);
+            border-radius: 6px;
+            background: var(--bg);
+            color: var(--text);
+            text-align: left;
+            cursor: pointer;
+            transition: border-color .15s, transform .15s;
+        }
+
+        .hero-choice:hover,
+        .hero-choice.selected {
+            border-color: var(--gold);
+            transform: translateY(-2px);
+        }
+
+        .hero-choice-avatar {
+            width: 100%;
+            aspect-ratio: 4 / 5;
+            border-bottom: 1px solid var(--border);
+            background-color: #17130e;
+            background-size: 300% 100%;
+            background-position-y: center;
+        }
+        .hero-choice-avatar.vq-generated-hero-art {
+            position:relative;
+            background-size: 300% 112%;
+            background-position-y: top;
+        }
+        .hero-choice-avatar.vq-generated-hero-art::after{content:"";position:absolute;right:0;bottom:0;width:72px;height:24px;background:var(--panel);pointer-events:none}
+        .hero-choice-copy { display: block; padding: 13px; }
+        .hero-choice strong { display: block; margin-bottom: 5px; color: var(--gold); font-size: 14px; }
+        .hero-choice-copy > span { display: block; color: var(--dim); font-size: 11px; line-height: 1.6; }
+        .hero-choice .hero-trait { margin-top: 7px; color: var(--cyan); }
+
+        .story-result-panel {
+            display: none;
+            width: min(760px, calc(100vw - 28px));
+            border: 1px solid var(--border);
+            background: var(--panel);
+        }
+
+        .story-result-panel.visible { display: grid; grid-template-columns: minmax(240px, .95fr) minmax(280px, 1.25fr); }
+        .story-result-scene { min-height: 236px; border-right: 1px solid var(--border); background: #07111f; overflow: hidden; }
+        .story-result-scene .story-scene-art { min-height: 300px; height: 100%; background-size: 235% auto; }
+        .story-result-copy { padding: 18px; }
+        .story-result-kicker { font-family: var(--px); font-size: 6px; letter-spacing: 1.5px; color: var(--cyan); }
+        .story-result-title { margin: 8px 0; color: var(--gold); font-size: 18px; line-height: 1.4; }
+        .story-result-text { color: var(--dim); font-size: 13px; line-height: 1.8; }
+
+        .story-choice-grid {
+            display: grid;
+            grid-template-columns: repeat(2, minmax(0, 1fr));
+            gap: 9px;
+            margin-top: 14px;
+        }
+
+        .story-choice {
+            padding: 12px;
+            border: 1px solid var(--border);
+            border-radius: 5px;
+            background: var(--bg);
+            color: var(--text);
+            text-align: left;
+            cursor: pointer;
+        }
+
+        .story-choice:hover { border-color: var(--gold); }
+        .story-choice strong { display: block; margin-bottom: 5px; color: var(--gold); font-size: 13px; }
+        .story-choice span { display: block; color: var(--dim); font-size: 11px; line-height: 1.55; }
+        .story-choice em { display: block; margin-top: 7px; color: var(--cyan); font-size: 10px; font-style: normal; }
+
+        @media (max-width: 560px) {
+            .story-hud,
+            .story-result-panel.visible { grid-template-columns: 1fr; }
+            .story-scene,
+            .story-result-scene { border-right: 0; border-bottom: 1px solid var(--border); }
+            .hero-choice-grid,
+            .story-choice-grid { grid-template-columns: 1fr; }
+            .hero-choice { display: grid; grid-template-columns: 118px 1fr; }
+            .hero-choice-avatar { height: 100%; min-height: 148px; aspect-ratio: auto; border-right: 1px solid var(--border); border-bottom: 0; }
+            .story-result-panel { width: min(100%, calc(100vw - 28px)); }
         }
 
         .lvl-card {
@@ -829,6 +1423,38 @@
             margin-top: 2px;
         }
 
+        .pack-story-status {
+            display: inline-flex;
+            align-items: center;
+            gap: 5px;
+            margin-top: 5px;
+            font-size: 11px;
+            color: var(--dim);
+        }
+
+        .pack-story-status.ready { color: var(--green); }
+        .pack-story-status.partial { color: var(--gold); }
+        .pack-story-status.generating { color: var(--cyan); }
+        .pack-story-status.failed { color: var(--red); }
+
+        .story-generation-steps {
+            display: grid;
+            gap: 9px;
+            margin-top: 14px;
+        }
+
+        .story-generation-step {
+            padding: 12px;
+            border: 1px solid var(--border);
+            border-left: 3px solid var(--cyan);
+            background: var(--bg);
+            color: var(--dim);
+            font-size: 12px;
+            line-height: 1.6;
+        }
+
+        .story-generation-step strong { display: block; color: var(--text); }
+
         .pack-btns {
             display: flex;
             gap: 8px;
@@ -1209,6 +1835,8 @@
             background: var(--border);
             border-radius: 3px;
         }
+        :focus-visible{outline:3px solid var(--cyan);outline-offset:3px}
+        @media(prefers-reduced-motion:reduce){*,*::before,*::after{animation-duration:.01ms!important;animation-iteration-count:1!important;transition-duration:.01ms!important;scroll-behavior:auto!important}}
     </style>
 </head>
 
@@ -1225,11 +1853,18 @@
             <button class="btn btn-gold" onclick="go('s-lb')">🏆 校园排行榜</button>
             <button class="btn btn-cyan" onclick="enterTeacher()">📚 教师入口</button>
         </div>
-        <button class="btn btn-gray btn-xs" onclick="window.location.href='./landing.html'"
-            style="position:absolute;bottom:52px;font-size:clamp(6px,1vw,8px);letter-spacing:1px;opacity:.55;transition:opacity .2s;"
-            onmouseover="this.style.opacity='.9'" onmouseout="this.style.opacity='.55'">
-            ← 返回官网首页
-        </button>
+        <div style="display:flex;gap:10px;position:absolute;bottom:52px;left:50%;transform:translateX(-50%)">
+            <button class="btn btn-gray btn-xs" onclick="window.location.href='./dashboard.html'"
+                style="font-size:clamp(6px,1vw,8px);letter-spacing:1px;opacity:.7"
+                onmouseover="this.style.opacity='1'" onmouseout="this.style.opacity='.7'">
+                ← 返回 Dashboard
+            </button>
+            <button class="btn btn-gray btn-xs" onclick="window.location.href='./landing.html'"
+                style="font-size:clamp(6px,1vw,8px);letter-spacing:1px;opacity:.5"
+                onmouseover="this.style.opacity='.8'" onmouseout="this.style.opacity='.5'">
+                官网首页
+            </button>
+        </div>
         <div
             style="position: absolute; bottom: 24px; font-size: 11px; color: var(--dim); opacity: 0.4; letter-spacing: 1px;">
             &copy; Designed by 赵月杨 Marc</div>
@@ -1268,7 +1903,52 @@
                 id="map-title">STAGE SELECT</div>
             <div style="font-size:13px;color:var(--dim);" id="map-sub"></div>
         </div>
-        <div class="map-grid" id="map-grid"></div>
+        <section class="journey-panel" aria-labelledby="journey-title">
+            <div class="journey-head">
+                <div>
+                    <div class="journey-kicker" id="journey-title">LEARNING PATH · 成长路线</div>
+                    <div class="journey-summary" id="journey-summary">正在分析当前词包进度…</div>
+                </div>
+                <div class="journey-percent" id="journey-percent">0%</div>
+            </div>
+            <div class="story-hud">
+                <div class="story-scene" id="story-map-scene" aria-hidden="true"></div>
+                <div class="story-hud-copy">
+                    <div class="story-world-name" id="story-world-name">正在打开冒险档案…</div>
+                    <div class="story-objective" id="story-objective"></div>
+                    <div class="story-hero-strip">
+                        <div class="story-hero-avatar" id="story-hero-avatar">?</div>
+                        <div class="story-hero-meta">
+                            <strong id="story-hero-name">尚未选择主角</strong>
+                            <span id="story-hero-status">选择主角后，故事将以不同方式展开。</span>
+                        </div>
+                        <button class="btn btn-xs btn-gray" id="story-hero-button" type="button"
+                            onclick="openHeroPicker()">主角档案</button>
+                    </div>
+                </div>
+            </div>
+            <div class="map-legend" aria-label="地图状态图例">
+                <span class="available"><i></i>可挑战</span>
+                <span class="recommended"><i></i>当前主线</span>
+                <span class="done"><i></i>已完成</span>
+                <span class="missed"><i></i>另一条命运</span>
+                <span><i></i>尚未抵达</span>
+            </div>
+            <div class="world-map-viewport" id="world-map-viewport" aria-label="完整词包学习地图">
+                <div class="world-map" id="journey-track"></div>
+            </div>
+            <div class="journey-next">
+                <div class="journey-next-copy">
+                    <strong id="journey-next-title">下一步</strong>
+                    <span id="journey-next-copy">完成当前关卡，逐步解锁后续路线。</span>
+                </div>
+                <button class="btn btn-sm btn-purple" id="journey-action" type="button">继续学习</button>
+            </div>
+        </section>
+        <details class="legacy-levels">
+            <summary>查看传统关卡快捷入口</summary>
+            <div class="map-grid" id="map-grid"></div>
+        </details>
         <div class="xpbar-wrap">
             <div class="xpbar-label" id="xp-label">XP: 0</div>
             <div class="xpbar-track">
@@ -1324,6 +2004,15 @@
             <div class="res-title" id="res-title">STAGE CLEAR!</div>
             <div id="res-msg"
                 style="font-size:14px;color:var(--dim);max-width:380px;text-align:center;line-height:1.7;"></div>
+            <section class="story-result-panel" id="story-result-panel" aria-live="polite">
+                <div class="story-result-scene" id="story-result-scene"></div>
+                <div class="story-result-copy">
+                    <div class="story-result-kicker" id="story-result-kicker">ADVENTURE LOG</div>
+                    <div class="story-result-title" id="story-result-title"></div>
+                    <div class="story-result-text" id="story-result-text"></div>
+                    <div class="story-choice-grid" id="story-choice-grid"></div>
+                </div>
+            </section>
             <div class="stat-row">
                 <div class="stat-box">
                     <div class="stat-val" id="r-score">0</div>
@@ -1403,6 +2092,44 @@
         </div>
     </div>
 
+    <div class="modal-bg" id="m-map-preview">
+        <div class="panel" style="max-width:680px;">
+            <div class="panel-title" style="color:var(--cyan);border-color:var(--cyan);">词包学习地图预览</div>
+            <div id="teacher-map-preview-summary" style="font-size:13px;color:var(--dim);line-height:1.7;margin-bottom:14px;"></div>
+            <div class="teacher-map-preview" id="teacher-map-preview-body"></div>
+            <button class="btn btn-cyan" style="width:100%;margin-top:16px;" onclick="closeModal('m-map-preview')">确认</button>
+        </div>
+    </div>
+
+    <div class="modal-bg" id="m-hero">
+        <div class="panel" style="max-width:760px;">
+            <div class="panel-title" style="color:var(--gold);border-color:var(--gold);">选择本次冒险的主角</div>
+            <div style="font-size:13px;color:var(--dim);line-height:1.75;">
+                同一张词包地图会因主角与剧情选择产生不同路线。完成第一章后，主角将锁定到本次冒险结束。
+            </div>
+            <div class="hero-choice-grid" id="hero-choice-grid"></div>
+            <div style="display:flex;justify-content:flex-end;">
+                <button class="btn btn-gray" id="hero-picker-close" type="button" onclick="closeHeroPicker()">稍后再选</button>
+            </div>
+        </div>
+    </div>
+
+    <div class="modal-bg" id="m-route-confirm">
+        <div class="panel" style="max-width:520px;">
+            <div class="panel-title" style="color:var(--purple);border-color:var(--purple);">确认剧情路线</div>
+            <div style="font-size:12px;color:var(--dim);line-height:1.7;margin-bottom:6px;">这一步只会在你确认后锁定。本次冒险中不能中途更换已选择的路线。</div>
+            <div style="padding:14px;border:1px solid var(--border);background:var(--bg);margin:14px 0;">
+                <div id="route-confirm-title" style="font-size:16px;font-weight:700;color:var(--text);margin-bottom:8px;"></div>
+                <div id="route-confirm-copy" style="font-size:13px;color:var(--dim);line-height:1.8;"></div>
+                <div id="route-confirm-meta" style="font-size:12px;color:var(--cyan);margin-top:10px;"></div>
+            </div>
+            <div style="display:flex;gap:10px;flex-wrap:wrap;">
+                <button class="btn btn-purple" style="flex:1;min-width:190px;" type="button" onclick="confirmStoryBranch()">确认选择并进入</button>
+                <button class="btn btn-gray" style="flex:1;min-width:120px;" type="button" onclick="cancelStoryBranch()">再看看</button>
+            </div>
+        </div>
+    </div>
+
     <div class="modal-bg" id="m-pw">
         <div class="panel" style="max-width:380px;">
             <div class="panel-title" id="t-auth-title">教师验证 TEACHER AUTH</div>
@@ -1469,9 +2196,8 @@
         // ══════════════════════════════════════════
         // SUPABASE INIT
         // ══════════════════════════════════════════
-        const S_URL = 'https://skvsssqfkzqudscrwiyt.supabase.co'; // ⚠️ 请在代码第 570 行填入您的 Supabase URL ！！！
-        const S_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InNrdnNzc3Fma3pxdWRzY3J3aXl0Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzU4OTY4MDgsImV4cCI6MjA5MTQ3MjgwOH0.lUi2lPlAOXSJRA3nuaIX6JpN_ecQNguI4bsQP3S62HM';
-        if (S_URL === '') alert('系统警告：请在代码第 570 行填入 Supabase URL！');
+        const S_URL = 'https://dosseusntiuzmldpwpow.supabase.co';
+        const S_KEY = 'sb_publishable__BwexSIOwKIJfBVnQyqgJA_mg_jxMMc';
         const vqClient = window.supabase.createClient(S_URL, S_KEY);
 
         // ══════════════════════════════════════════
@@ -1538,16 +2264,42 @@
         }
         function getTitle(lv) { return getTitleObj(lv).title; }
 
-        const G = { userId: '', name: '', classId: '', selPack: null, pack: null, prog: null, lvIdx: 0, lvWords: [], stages: [], stgIdx: 0, qs: [], qIdx: 0, hp: 5, maxHp: 5, mhp: 0, mhpMax: 0, score: 0, streak: 0, maxStreak: 0, correct: 0, total: 0, levels: [], wrongWords: [], isReview: false };
+        const G = { userId: '', name: '', classId: '', selPack: null, pack: null, prog: null, lvIdx: 0, lvWords: [], stages: [], stgIdx: 0, qs: [], qIdx: 0, hp: 5, maxHp: 5, mhp: 0, mhpMax: 0, score: 0, streak: 0, maxStreak: 0, correct: 0, total: 0, levels: [], wrongWords: [], isReview: false, activeMapNode: '', activeMapMode: 'balanced', mapGraph: null, ability:null };
 
         let audioCtx = null;
         function initAudio() { if (!audioCtx) audioCtx = new (window.AudioContext || window.webkitAudioContext)(); if (audioCtx.state === 'suspended') audioCtx.resume(); }
         function playSfx(type) { if (!audioCtx) return; const osc = audioCtx.createOscillator(), gain = audioCtx.createGain(); osc.connect(gain); gain.connect(audioCtx.destination); const now = audioCtx.currentTime; if (type === 'win') { osc.type = 'square'; osc.frequency.setValueAtTime(440, now); osc.frequency.setValueAtTime(554, now + .08); osc.frequency.setValueAtTime(659, now + .16); gain.gain.setValueAtTime(.08, now); gain.gain.exponentialRampToValueAtTime(.01, now + .3); osc.start(now); osc.stop(now + .3); } else { osc.type = 'sawtooth'; osc.frequency.setValueAtTime(300, now); osc.frequency.exponentialRampToValueAtTime(100, now + .3); gain.gain.setValueAtTime(.1, now); gain.gain.exponentialRampToValueAtTime(.01, now + .3); osc.start(now); osc.stop(now + .3); } }
-        function playAudio(t) { if (!window.speechSynthesis) return; speechSynthesis.cancel(); const u = new SpeechSynthesisUtterance(t); u.lang = 'en-US'; u.rate = 0.85; speechSynthesis.speak(u); }
-
+        function playAudio(t) {
+  if (!window.speechSynthesis || !t) return;
+  // 去掉____下划线，只读实际单词/句子
+  const clean = t.replace(/_{2,}/g, '').replace(/\s+/g,' ').trim();
+  if (!clean) return;
+  speechSynthesis.cancel();
+  const speak = () => {
+    const u = new SpeechSynthesisUtterance(clean);
+    u.lang = 'en-US'; u.rate = 0.75; u.pitch = 1.0; u.volume = 1.0;
+    const voices = speechSynthesis.getVoices();
+    // 优先选高质量语音
+    const best = voices.find(v => v.name.includes('Google') && v.lang.startsWith('en'))
+              || voices.find(v => v.lang === 'en-US' && !v.name.includes('Compact'))
+              || voices.find(v => v.lang.startsWith('en'));
+    if (best) u.voice = best;
+    speechSynthesis.speak(u);
+  };
+  if (speechSynthesis.getVoices().length > 0) { speak(); }
+  else { speechSynthesis.addEventListener('voiceschanged', speak, { once: true }); }
+}
         // ════ 页面路由控制 (无感刷新) ════
         async function go(id) {
             initAudio();
+            if (id === 's-lb') {
+                const { data: { session } } = await vqClient.auth.getSession();
+                if (!session) {
+                    sessionStorage.removeItem('last_screen');
+                    toast('请先登录，再查看校园排行榜', 'err');
+                    id = 's-enter';
+                }
+            }
             document.querySelectorAll('.screen').forEach(s => s.classList.remove('active'));
             document.getElementById(id).classList.add('active');
             sessionStorage.setItem('last_screen', id);
@@ -1562,7 +2314,14 @@
         // ════ 学生登录与班级锁定逻辑 ════
         async function renderLogin(mode = 'login') {
             const c = document.getElementById('login-section'), task = document.getElementById('task-section');
-            const title = document.getElementById('entry-title'), uid = localStorage.getItem('vq_uid');
+            const title = document.getElementById('entry-title');
+            const { data: { session } } = await vqClient.auth.getSession();
+            const uid = session?.user?.id || '';
+            if (!uid) {
+                localStorage.removeItem('vq_uid');
+                localStorage.removeItem('vq_unm');
+                G.userId = ''; G.name = ''; G.classId = '';
+            }
 
             c.innerHTML = '<div style="text-align:center; color:var(--cyan); padding:20px;">📡 连接云端中...</div>';
             task.style.display = 'none';
@@ -1573,10 +2332,12 @@
             if (uid) {
                 const { data: profile } = await vqClient.from('profiles').select('*, classes(name)').eq('id', uid).maybeSingle();
                 G.userId = uid; G.name = profile?.full_name || localStorage.getItem('vq_unm'); G.classId = profile?.class_id;
+                const {data:ability}=await vqClient.rpc('refresh_vq_student_level');
+                if(ability)G.ability=ability;
 
                 let classHtml = '';
                 if (G.classId) {
-                    classHtml = `<div style="font-size:12px; color:var(--gold); margin-top:10px; padding:8px; background:rgba(255,215,0,0.1); border-radius:4px; border:1px dashed var(--gold); text-align:center;">所属班级: <b>${profile?.classes?.name}</b> (已锁定)</div>`;
+                    classHtml = `<div style="font-size:12px; color:var(--gold); margin-top:10px; padding:8px; background:rgba(255,215,0,0.1); border-radius:4px; border:1px dashed var(--gold); text-align:center;">所属班级: <b>${escH(profile?.classes?.name)}</b> (已锁定)</div>`;
                     task.style.display = 'block'; renderPackSelCloud();
                 } else {
                     classHtml = `
@@ -1584,7 +2345,7 @@
                             <div style="font-size:12px; color:var(--gold); margin-bottom:8px;">⚠️ 你尚未加入班级，请选择：</div>
                             <select id="join-class-sel" class="inp" style="padding:10px; font-size:14px; margin-bottom:10px;">
                                 <option value="">-- 选择班级 --</option>
-                                ${classes?.map(cl => `<option value="${cl.id}">${cl.name}</option>`).join('')}
+                                ${classes?.map(cl => `<option value="${cl.id}">${escH(cl.name)}</option>`).join('')}
                             </select>
                             <button class="btn btn-green" style="width:100%; padding:12px; font-size:14px;" onclick="confirmJoinClass()">✓ 确认加入 (不可更改)</button>
                         </div>`;
@@ -1615,11 +2376,8 @@
                 c.innerHTML = `
                     <div class="ig"><label>真实姓名</label><input class="inp" id="s-nm" placeholder="你的名字"></div>
                     <div class="ig"><label>注册邮箱</label><input class="inp" id="s-em" type="email" placeholder="email@example.com"></div>
-                    <div class="ig"><label>密码</label><input class="inp" id="s-pd" type="password" placeholder="设置密码"></div>
-                    <div class="ig"><label style="color:var(--gold);">学生邀请码</label><input class="inp" id="s-inv" placeholder="输入邀请码" style="border-color:var(--gold);"></div>
-                    <div class="ig"><label style="color:var(--gold);">选择班级 (选定后不可更改)</label>
-                        <select class="inp" id="s-cl" style="border-color:var(--gold);"><option value="">-- 必选 --</option>${classes?.map(cl => `<option value="${cl.id}">${cl.name}</option>`).join('')}</select>
-                    </div>
+                    <div class="ig"><label>密码</label><input class="inp" id="s-pd" type="password" minlength="8" autocomplete="new-password" placeholder="至少8位"></div>
+                    <div class="ig"><label style="color:var(--gold);">学生邀请码或班级邀请码</label><input class="inp" id="s-inv" placeholder="VQS-… 或 VQC-…" style="border-color:var(--gold);" onblur="previewVqInvite()"><div id="s-invite-hint" style="font-size:12px;color:var(--dim);line-height:1.7;margin-top:6px">班级码会自动加入对应班级；单次码注册后可自行选择一次班级。</div></div>
                     <div style="display:flex;gap:10px;flex-wrap:wrap;">
                         <button class="btn btn-gray"  style="flex:1;min-width:120px;" onclick="renderLogin('login')">← 返回登录</button>
                         <button class="btn btn-cyan"  style="flex:1;min-width:120px;" onclick="studentAuth('up')">确认注册</button>
@@ -1641,51 +2399,38 @@
         async function studentAuth(type) {
             try {
                 const em = document.getElementById('s-em').value.trim(), pd = document.getElementById('s-pd').value;
-                const nm = document.getElementById('s-nm')?.value.trim(), cl = document.getElementById('s-cl')?.value;
+                const nm = document.getElementById('s-nm')?.value.trim();
                 if (!em || !pd) return toast('填写邮箱和密码', 'err');
 
                 if (type === 'up') {
-                    if (!nm || !cl) return toast('姓名和班级必须填写/选择', 'err');
+                    if (pd.length < 8) return toast('密码至少8位', 'err');
+                    if (!nm) return toast('请填写姓名', 'err');
                     const inv = document.getElementById('s-inv')?.value?.trim();
                     if (!inv) return toast('请填写学生邀请码', 'err');
-                    // ── 邀请码验证：检查有效 + 使用次数 < 50 ──
-                    const { data: vCode } = await vqClient.from('invite_codes').select('*').eq('code', inv).eq('is_active', true).maybeSingle();
-                    if (!vCode) return toast('邀请码无效或已被停用', 'err');
-                    const usedCount = vCode.used_count || 0;
-                    if (usedCount >= 50) return toast('该邀请码已达使用上限，请联系老师', 'err');
+                    const details=await previewVqInvite();
+                    if (!details) return toast('邀请码无效、已使用、已过期或班级已满', 'err');
                 }
 
                 toast('验证中...', 'ok');
-                let res = (type === 'up') ? await vqClient.auth.signUp({ email: em, password: pd, options: { data: { display_name: nm } } }) : await vqClient.auth.signInWithPassword({ email: em, password: pd });
+                const inv = type === 'up' ? document.getElementById('s-inv')?.value?.trim() : '';
+                let res = (type === 'up')
+                    ? await vqClient.auth.signUp({
+                        email: em,
+                        password: pd,
+                        options: { data: { display_name: nm, vq_role: 'student', vq_invite: inv } }
+                    })
+                    : await vqClient.auth.signInWithPassword({ email: em, password: pd });
 
                 if (res.error) {
                     if (res.error.message.includes('Invalid login')) return toast('邮箱或密码错误', 'err');
                     return toast(res.error.message, 'err');
                 }
 
-                if (type === 'up') await vqClient.from('profiles').upsert({ id: res.data.user.id, full_name: nm, class_id: cl });
-
-                // ── 注册成功：更新邀请码使用次数 ──
                 if (type === 'up') {
-                    const inv = document.getElementById('s-inv')?.value?.trim();
-                    if (inv) {
-                        const { data: curCode } = await vqClient.from('invite_codes').select('used_count').eq('code', inv).maybeSingle();
-                        const newCount = (curCode?.used_count || 0) + 1;
-                        const updatePayload = { used_count: newCount };
-                        // 达到50次上限时停用并发邮件通知
-                        if (newCount >= 50) {
-                            updatePayload.is_active = false;
-                            // 通过 mailto 提醒（在新tab静默打开，用户无感知）
-                            const subject = encodeURIComponent('[VocaQuest] 邀请码已达上限，请生成新码');
-                            const body = encodeURIComponent(`邀请码 ${inv} 已被使用 ${newCount} 次，已自动停用。\n\n请登录教师后台生成新的邀请码。`);
-                            const a = document.createElement('a');
-                            a.href = `mailto:kinsgimth@hotmail.com?subject=${subject}&body=${body}`;
-                            a.style.display = 'none';
-                            document.body.appendChild(a);
-                            a.click();
-                            document.body.removeChild(a);
-                        }
-                        await vqClient.from('invite_codes').update(updatePayload).eq('code', inv);
+                    if (!res.data.session) {
+                        toast('注册成功！请检查邮箱后登录', 'ok');
+                        await renderLogin();
+                        return;
                     }
                 }
 
@@ -1697,14 +2442,24 @@
             } catch (e) { console.error(e); toast('网络错误', 'err'); }
         }
 
+        async function previewVqInvite(){
+            const code=document.getElementById('s-inv')?.value.trim(),hint=document.getElementById('s-invite-hint');
+            if(!code)return null;
+            if(hint)hint.textContent='正在验证邀请码…';
+            const {data,error}=await vqClient.rpc('get_vq_invite_details',{p_code:code,p_role:'student'});
+            if(error||!data?.valid){if(hint){hint.textContent='邀请码无效、已使用、已过期或班级已满';hint.style.color='var(--red)';}return null;}
+            if(hint){hint.textContent=data.kind==='class'?`注册后直接加入「${data.class_name}」，不可更改。`:'注册后可选择一次班级。';hint.style.color=data.kind==='class'?'var(--cyan)':'var(--gold)';}
+            return data;
+        }
+
         async function confirmJoinClass() {
             const cid = document.getElementById('join-class-sel').value;
             if (!cid) return toast('请先选择班级', 'err');
             if (!confirm('⚠️ 确认加入该班级？加入后无法自行更改！')) return;
 
             toast('正在绑定...', 'ok');
-            const { error } = await vqClient.from('profiles').upsert({ id: G.userId, class_id: cid });
-            if (error) { console.error(error); return toast('绑定失败，请检查数据库权限', 'err'); }
+            const { data,error } = await vqClient.rpc('join_vq_class_once',{p_class_id:cid});
+            if (error||!data?.joined) { console.error(error); return toast(error?.message||'绑定失败', 'err'); }
 
             toast('加入班级成功！', 'ok');
             await renderLogin();
@@ -1736,7 +2491,23 @@
             }
         }
 
-        function enterTeacher() {
+        async function enterTeacher() {
+            // 先检查当前 session，已登录的教师直接进入
+            try {
+                const { data: { session } } = await vqClient.auth.getSession();
+                if (session) {
+                    const { data: profile } = await vqClient.from('profiles')
+                        .select('is_teacher, full_name').eq('id', session.user.id).maybeSingle();
+                    if (profile?.is_teacher) {
+                        localStorage.setItem('vq_uid', session.user.id);
+                        localStorage.setItem('vq_unm', profile.full_name || session.user.email.split('@')[0]);
+                        go('s-teacher');
+                        await switchTeacherTab('class');
+                        return;
+                    }
+                }
+            } catch(e) { console.warn('session check:', e); }
+            // 未登录或不是教师，弹出登录框
             document.getElementById('t-pd').value = '';
             toggleTeacherMode('in');
             openModal('m-pw');
@@ -1748,34 +2519,55 @@
                 if (!em || !pd) return toast('请填写邮箱和密码', 'err');
 
                 if (type === 'up') {
+                    if (pd.length < 8) return toast('密码至少8位', 'err');
                     const nm = document.getElementById('t-nm').value.trim();
                     if (!nm) return toast('请填写教师姓名', 'err');
                     const inv = document.getElementById('t-inv').value.trim();
                     if (!inv) return toast('请填写教师专属邀请码', 'err');
-                    const { data: vCode } = await vqClient.from('invite_codes').select('*').eq('code', inv).eq('is_active', true).maybeSingle();
-                    if (!vCode) return toast('邀请码验证失败', 'err');
+                    const { data: validCode, error: inviteError } = await vqClient.rpc('validate_vq_invite',{p_code:inv,p_role:'teacher'});
+                    if (inviteError || !validCode) return toast('邀请码验证失败或不是教师码', 'err');
                 }
 
                 toast('验证中...');
-                let res = (type === 'up') ? await vqClient.auth.signUp({ email: em, password: pd }) : await vqClient.auth.signInWithPassword({ email: em, password: pd });
+                const nm = type === 'up' ? document.getElementById('t-nm').value.trim() : '';
+                const inv = type === 'up' ? document.getElementById('t-inv').value.trim() : '';
+                let res = (type === 'up')
+                    ? await vqClient.auth.signUp({
+                        email: em,
+                        password: pd,
+                        options: { data: { display_name: nm, vq_role: 'teacher', vq_invite: inv, vq_class_id: '' } }
+                    })
+                    : await vqClient.auth.signInWithPassword({ email: em, password: pd });
 
                 if (res.error) {
                     if (res.error.message.includes('Invalid login')) return toast('邮箱或密码错误', 'err');
                     return toast(res.error.message, 'err');
                 }
 
+                // 验证是否是教师账号
+                if (type === 'in') {
+                    const { data: profile } = await vqClient.from('profiles').select('is_teacher,full_name').eq('id', res.data.user.id).maybeSingle();
+                    if (!profile?.is_teacher) {
+                        await vqClient.auth.signOut();
+                        return toast('此账号不是教师账号，请使用教师邮箱登录', 'err');
+                    }
+                    localStorage.setItem('vq_unm', profile.full_name || em.split('@')[0]);
+                }
+
                 if (type === 'up') {
-                    const nm = document.getElementById('t-nm').value.trim();
-                    await vqClient.from('profiles').upsert({ id: res.data.user.id, is_teacher: true, full_name: nm || em.split('@')[0] });
                     localStorage.setItem('vq_unm', nm || em.split('@')[0]);
-                } else {
-                    localStorage.setItem('vq_unm', em.split('@')[0]);
+                    if (!res.data.session) {
+                        closeModal('m-pw');
+                        toast('注册成功！请检查邮箱后登录', 'ok');
+                        return;
+                    }
                 }
 
                 localStorage.setItem('vq_uid', res.data.user.id);
                 closeModal('m-pw');
                 toast('登录成功！', 'ok');
                 go('s-teacher');
+                await switchTeacherTab('class');
             } catch (e) { console.error(e); toast('验证出错', 'err'); }
         }
 
@@ -1789,7 +2581,7 @@
                     <div style="display:flex;gap:10px;margin-bottom:20px;">
                         <select class="inp" id="t-class-selector" style="margin:0;flex:2;font-size:14px;" onchange="loadTeacherClassData(this.value)">
                             <option value="">-- 选择全校所有班级进行管理 --</option>
-                            ${classes?.map(c => `<option value="${c.id}">${c.name}</option>`).join('') || ''}
+                            ${classes?.map(c => `<option value="${c.id}">${escH(c.name)}</option>`).join('') || ''}
                         </select>
                         <button class="btn btn-sm btn-cyan" onclick="createClass()">+ 新建班级</button>
                     </div>
@@ -1798,18 +2590,27 @@
             } else {
                 cont.innerHTML = '<div style="text-align:center;color:var(--cyan);">📡 加载词库...</div>';
                 const { data: packs } = await vqClient.from('word_packs').select('*').order('created_at', { ascending: false });
+                window._teacherPacks = packs || [];
 
                 let h = '';
                 packs?.forEach((p, pi) => {
                     const oldWordsStr = encodeURIComponent(JSON.stringify(p.words));
+                    const storyStatus = packStoryStatus(p);
                     h += `
                     <div class="pack-item">
                         <div class="pack-hdr" onclick="this.nextElementSibling.classList.toggle('open')">
                             <div class="pack-hdr-l">
                                 <span style="font-size:24px;">${p.icon || '📖'}</span>
-                                <div><div class="pack-nm">${p.name}</div><div class="pack-meta">${p.words.length} WORDS</div></div>
+                                <div>
+                                    <div class="pack-nm">${escH(p.name)}</div>
+                                    <div class="pack-meta">${p.words.length} WORDS</div>
+                                    <div class="pack-story-status ${storyStatus.key}">${storyStatus.label}</div>
+                                </div>
                             </div>
                             <div class="pack-btns">
+                                ${storyStatus.canPreview
+                                    ? `<button class="btn btn-xs btn-cyan" onclick="event.stopPropagation();previewTeacherMap('${escQ(p.id)}')">预览专属世界</button>`
+                                    : `<button class="btn btn-xs btn-gold" ${storyStatus.key === 'generating' ? 'disabled' : ''} onclick="event.stopPropagation();generatePackStory('${escQ(p.id)}')">${storyStatus.key === 'generating' ? '生成中' : '生成专属世界'}</button>`}
                                 <button class="btn btn-xs btn-gray" onclick="event.stopPropagation();deletePack('${p.id}')">删除</button>
                                 <span style="color:var(--dim);font-size:16px;padding:0 6px;">▼</span>
                             </div>
@@ -1836,6 +2637,131 @@
             }
         }
 
+        function packStoryStatus(pack) {
+            const status = pack?.story_data?.status || 'pending';
+            if (status === 'ready') return { key: 'ready', label: '已生成专属故事、人物与地图', canPreview: true };
+            if (status === 'partial') return { key: 'partial', label: '故事已生成，图片需要重试', canPreview: true };
+            if (status === 'generating') return { key: 'generating', label: 'AI 正在构建专属世界', canPreview: false };
+            if (status === 'failed') return { key: 'failed', label: '上次生成失败，可以重试', canPreview: false };
+            return { key: 'pending', label: '尚未生成专属世界', canPreview: false };
+        }
+
+        function showStoryGeneration(pack) {
+            document.getElementById('teacher-map-preview-summary').innerHTML =
+                `<strong style="color:var(--text);">${escH(pack.name)}</strong> 正在首次生成专属世界。生成完成后会保存到词包，所有学生共用，不会重复收费。`;
+            document.getElementById('teacher-map-preview-body').innerHTML = `
+                <div class="story-generation-steps">
+                    <div class="story-generation-step"><strong>1. 分析词包主题</strong>从 ${pack.words.length} 个词中识别主题、时代、场景与情绪。</div>
+                    <div class="story-generation-step"><strong>2. 编写完整冒险</strong>生成 12 章连续故事、三位主角、A/B 支线和两个结局。</div>
+                    <div class="story-generation-step"><strong>3. 绘制游戏素材</strong>生成这个词包独有的 2.5D 地图和人物立绘，并永久保存。</div>
+                </div>`;
+            openModal('m-map-preview');
+        }
+
+        async function generatePackStory(packId, retry = false) {
+            let pack = (window._teacherPacks || []).find(item => item.id === packId);
+            if (!pack) {
+                const { data } = await vqClient.from('word_packs').select('*').eq('id', packId).maybeSingle();
+                pack = data;
+            }
+            if (!pack) return toast('没有找到这个词包', 'err');
+            showStoryGeneration(pack);
+            try {
+                const { data: { session } } = await vqClient.auth.getSession();
+                if (!session?.access_token) throw new Error('登录已过期，请重新登录');
+                const response = await fetch('/api/story', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'Authorization': `Bearer ${session.access_token}`
+                    },
+                    body: JSON.stringify({ packId, retry })
+                });
+                const result = await response.json().catch(() => ({}));
+                if (!response.ok) throw new Error(result.error || '专属世界生成失败');
+                pack.story_data = result.storyData;
+                const existingIndex = (window._teacherPacks || []).findIndex(item => item.id === packId);
+                if (existingIndex >= 0) window._teacherPacks[existingIndex] = { ...pack };
+                toast(result.cached ? '已读取这个词包现有的专属世界' : '专属世界生成完成', 'ok');
+                await switchTeacherTab('pack');
+                previewTeacherMap(packId);
+            } catch (error) {
+                console.error('Story generation:', error);
+                document.getElementById('teacher-map-preview-summary').innerHTML =
+                    `<strong style="color:var(--red);">生成没有完成</strong> · ${escH(error.message)}`;
+                document.getElementById('teacher-map-preview-body').innerHTML =
+                    `<button class="btn btn-gold" style="width:100%;" onclick="generatePackStory('${escQ(packId)}', true)">重新生成专属世界</button>`;
+                toast(error.message, 'err');
+                await switchTeacherTab('pack');
+            }
+        }
+
+        function previewTeacherMap(packId) {
+            const pack = (window._teacherPacks || []).find(item => item.id === packId);
+            if (!pack) return toast('没有找到这个词包', 'err');
+            const words = (pack.words || []).filter(word => word?.w && word?.m);
+            const groups = [];
+            for (let i = 0; i < words.length; i += 5) {
+                const group = words.slice(i, i + 5);
+                if (group.length < 2 && groups.length) groups[groups.length - 1].push(...group);
+                else groups.push(group);
+            }
+            document.getElementById('teacher-map-preview-summary').innerHTML =
+                `<strong style="color:var(--text);">${escH(pack.name)}</strong> 将自动生成
+                <strong style="color:var(--gold);">${groups.length * 3 + 3}</strong> 个地图地点：
+                ${groups.length} 个识义主线、${groups.length} 个听辨分支、${groups.length} 个拼写分支，
+                以及语境城邦、薄弱词修复站和词包守卫战。学生可以看见整张地图。`;
+            document.getElementById('teacher-map-preview-body').innerHTML = groups.map((group, index) => `
+                <div class="teacher-map-stage">
+                    <div class="memory">🧠 第 ${index + 1} 组<br><span style="color:var(--dim)">${group.length} 个词</span></div>
+                    <div class="sound">🎧 回声峡谷<br><span style="color:var(--dim)">听音辨义</span></div>
+                    <div class="spelling">✍️ 拼写熔炉<br><span style="color:var(--dim)">主动拼写</span></div>
+                </div>`).join('') + `
+                <div style="display:flex;gap:8px;flex-wrap:wrap;margin-top:4px;">
+                    <span class="btn btn-xs btn-purple" style="cursor:default;">🏙️ 语境城邦</span>
+                    <span class="btn btn-xs btn-gray" style="cursor:default;">🧭 薄弱词修复站</span>
+                    <span class="btn btn-xs btn-gold" style="cursor:default;">🏰 词包守卫战</span>
+                </div>`;
+            openModal('m-map-preview');
+        }
+
+        function summarizeStudentMap(prog, pack) {
+            const words = Array.isArray(pack?.words) ? pack.words.filter(word => word?.w && word?.m) : [];
+            const segmentCount = Math.max(1, Math.ceil(words.length / 5));
+            const state = prog?.mapState;
+            if (!state?.completed) {
+                return {
+                    done: Math.min(segmentCount * 3, (prog?.cleared?.length || 0) * 3),
+                    total: segmentCount * 3 + 3,
+                    next: '学生下次进入时自动生成新地图'
+                };
+            }
+            const completed = state.completed;
+            for (let i = 0; i < segmentCount; i++) {
+                if (!completed[`memory-${i}`]) {
+                    return { done: countMapCompletions(completed), total: segmentCount * 3 + 3, next: `记忆森林 ${i + 1}` };
+                }
+                if (!completed[`sound-${i}`] && !completed[`spelling-${i}`]) {
+                    const listening = state.skills?.listening;
+                    const spelling = state.skills?.spelling;
+                    const listeningRate = listening?.total ? listening.correct / listening.total : 0;
+                    const spellingRate = spelling?.total ? spelling.correct / spelling.total : 0;
+                    const next = listeningRate <= spellingRate ? `回声峡谷 ${i + 1}` : `拼写熔炉 ${i + 1}`;
+                    return { done: countMapCompletions(completed), total: segmentCount * 3 + 3, next };
+                }
+            }
+            const weakCount = [...(prog?.wrongWords || []), ...(prog?.unfamiliar || [])]
+                .filter((word, index, list) => word?.w && list.findIndex(item => item.w === word.w) === index).length;
+            let next = '词包守卫战';
+            if (!completed.context) next = '语境城邦';
+            else if (weakCount >= 2 && !completed.review) next = '薄弱词修复站';
+            return { done: countMapCompletions(completed), total: segmentCount * 3 + 3, next };
+        }
+
+        function countMapCompletions(completed) {
+            return Object.entries(completed || {}).filter(([id, value]) => id !== 'camp' && value).length;
+        }
+
         async function loadTeacherClassData(cid) {
             const dashboard = document.getElementById('t-class-dashboard');
             if (!cid) return dashboard.innerHTML = '<div style="color:var(--dim);text-align:center;padding:20px;">请在上方选择一个班级查看数据，或新建。</div>';
@@ -1849,7 +2775,7 @@
             dashboard.innerHTML = `
                 <div class="pack-item" style="padding:20px;">
                     <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:15px;">
-                        <b style="font-size:18px; color:var(--gold);">${clData.name}</b> 
+                        <b style="font-size:18px; color:var(--gold);">${escH(clData.name)}</b>
                         <span style="font-size:13px; color:var(--dim);">${stuCount || 0} 名学生</span>
                     </div>
                     <div style="font-size:13px; color:var(--cyan); border-top:1px dashed var(--border); padding-top:15px; margin-bottom:15px;">
@@ -1857,7 +2783,7 @@
                     </div>
                     <div style="display:flex; gap:10px; flex-wrap:wrap;">
                         <button class="btn btn-sm btn-gold" style="flex:1; min-width:100px;" onclick="manageAssignments('${cid}')">指派特训任务</button>
-                        <button class="btn btn-sm btn-cyan" style="flex:1; min-width:100px;" onclick="viewClassData('${cid}', '${clData.name}')">查看学生进度</button>
+                        <button class="btn btn-sm btn-cyan" style="flex:1; min-width:100px;" onclick="viewClassData('${cid}', '${escQ(clData.name)}')">查看学生进度</button>
                         <button class="btn btn-sm btn-red" style="flex:1; min-width:100px;" onclick="deleteClass('${cid}')">删除该班级</button>
                     </div>
                 </div>
@@ -1867,8 +2793,8 @@
         async function createClass() {
             const nm = prompt('请输入新班级名称 (例如: 2026届1班):');
             if (!nm) return;
-            const tid = (await vqClient.auth.getUser()).data.user.id;
-            await vqClient.from('classes').insert({ name: nm, teacher_id: tid });
+            const {error}=await vqClient.rpc('create_vq_class',{p_name:nm});
+            if(error)return toast('班级创建失败：'+error.message,'err');
             toast('班级创建成功');
             await switchTeacherTab('class');
         }
@@ -1881,7 +2807,7 @@
             const curIds = current.map(c => c.pack_id);
             const html = allPacks.map(p => `
                 <label style="display:flex; justify-content:space-between; padding:12px; border-bottom:1px solid #222; align-items:center; cursor:pointer;">
-                    <span style="font-size:15px;">${p.name}</span>
+                    <span style="font-size:15px;">${escH(p.name)}</span>
                     <input type="checkbox" style="width:20px;height:20px;" ${curIds.includes(p.id) ? 'checked' : ''} onchange="toggleAssign('${cid}','${p.id}',this.checked)">
                 </label>`).join('');
             document.getElementById('t-class-dashboard').innerHTML = `
@@ -1897,26 +2823,37 @@
             document.getElementById('t-class-dashboard').innerHTML = '<div style="padding:20px;text-align:center;color:var(--cyan);">📡 正在加载该班级学生数据...</div>';
             try {
                 const { data: students } = await vqClient.from('profiles').select('id, full_name').eq('class_id', cid).eq('is_teacher', false);
-                if (!students || students.length === 0) return document.getElementById('t-class-dashboard').innerHTML = `<div style="font-size:16px;font-weight:bold;margin-bottom:10px;color:var(--gold);">${cname}</div><div style="color:var(--dim);text-align:center;padding:30px;">暂无学生加入该班级</div><button class="btn btn-cyan" style="width:100%;" onclick="switchTeacherTab('class')">返回</button>`;
+                if (!students || students.length === 0) return document.getElementById('t-class-dashboard').innerHTML = `<div style="font-size:16px;font-weight:bold;margin-bottom:10px;color:var(--gold);">${escH(cname)}</div><div style="color:var(--dim);text-align:center;padding:30px;">暂无学生加入该班级</div><button class="btn btn-cyan" style="width:100%;" onclick="switchTeacherTab('class')">返回</button>`;
 
                 const uids = students.map(s => s.id);
                 const { data: progData } = await vqClient.from('student_progress').select('*').in('user_id', uids);
-                const { data: packs } = await vqClient.from('word_packs').select('id, name');
-                const packMap = {}; packs?.forEach(p => packMap[p.id] = p.name);
+                const { data: packs } = await vqClient.from('word_packs').select('id, name, words');
+                const packMap = {}; packs?.forEach(p => packMap[p.id] = p);
 
                 const stuMap = {}; students.forEach(s => { stuMap[s.id] = { name: s.full_name, xp: 0, packs: [] }; });
-                progData?.forEach(d => { if (stuMap[d.user_id]) { stuMap[d.user_id].xp += (d.prog_data?.xp || 0); stuMap[d.user_id].packs.push({ pName: packMap[d.pack_id] || '未知特训包', cleared: d.prog_data?.cleared?.length || 0, xp: d.prog_data?.xp || 0 }); } });
+                progData?.forEach(d => {
+                    if (!stuMap[d.user_id]) return;
+                    const xp = Number(d.prog_data?.xp) || 0;
+                    const cleared = Array.isArray(d.prog_data?.cleared) ? d.prog_data.cleared.length : 0;
+                    const pack = packMap[d.pack_id];
+                    const mapStatus = summarizeStudentMap(d.prog_data, pack);
+                    stuMap[d.user_id].xp += xp;
+                    stuMap[d.user_id].packs.push({ pName: pack?.name || '未知特训包', cleared, xp, mapStatus });
+                });
 
-                let html = `<div style="font-size:16px;font-weight:bold;margin-bottom:10px;color:var(--gold);">${cname} - 监控面板</div><div style="max-height:450px; overflow-y:auto; margin-bottom:20px; padding-right:5px;">`;
+                let html = `<div style="font-size:16px;font-weight:bold;margin-bottom:10px;color:var(--gold);">${escH(cname)} - 监控面板</div><div style="max-height:450px; overflow-y:auto; margin-bottom:20px; padding-right:5px;">`;
                 Object.values(stuMap).forEach(sData => {
                     html += `
                     <div style="background:rgba(0,0,0,0.3); border:1px solid var(--border); border-radius:6px; padding:15px; margin-bottom:12px;">
                         <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:10px; border-bottom:1px dashed var(--border); padding-bottom:8px;">
-                            <span style="font-weight:bold; color:var(--cyan); font-size:15px;">👤 ${sData.name || '匿名学生'}</span>
+                            <span style="font-weight:bold; color:var(--cyan); font-size:15px;">👤 ${escH(sData.name || '匿名学生')}</span>
                             <span style="color:var(--gold); font-size:14px; font-weight:bold;">总计: ${sData.xp} XP</span>
                         </div>
                         <div style="font-size:12px; color:var(--dim);">
-                            ${sData.packs.length > 0 ? sData.packs.map(p => `<div style="display:flex; justify-content:space-between; margin-bottom:6px; background:rgba(255,255,255,0.02); padding:6px; border-radius:4px;"><span style="color:var(--text);">${p.pName}</span><span>通关 <b style="color:var(--green);">${p.cleared}</b> | ${p.xp} XP</span></div>`).join('') : '<div style="text-align:center;">尚未开始任何特训</div>'}
+                            ${sData.packs.length > 0 ? sData.packs.map(p => `<div style="margin-bottom:7px;background:rgba(255,255,255,0.02);padding:9px;border-radius:4px;">
+                                <div style="display:flex;justify-content:space-between;gap:10px;"><span style="color:var(--text);">${escH(p.pName)}</span><span>地图 <b style="color:var(--green);">${p.mapStatus.done}/${p.mapStatus.total}</b> | ${p.xp} XP</span></div>
+                                <div style="margin-top:5px;color:var(--cyan);">下一步：${escH(p.mapStatus.next)}</div>
+                            </div>`).join('') : '<div style="text-align:center;">尚未开始任何特训</div>'}
                         </div>
                     </div>`;
                 });
@@ -1958,16 +2895,56 @@
             toast('📡 正在上传至云端...', 'ok');
             try {
                 const oldWords = JSON.parse(decodeURIComponent(oldWordsStr));
-                const { error } = await vqClient.from('word_packs').update({ words: [...oldWords, ...news] }).eq('id', pid);
+                const byWord = new Map(oldWords.map(word => [String(word.w || '').toLowerCase(), word]));
+                news.forEach(word => byWord.set(String(word.w || '').toLowerCase(), word));
+                const mergedWords = [...byWord.values()];
+                if (mergedWords.length === oldWords.length) {
+                    return toast('没有发现新单词，原有专属世界保持不变', 'ok');
+                }
+                const { error } = await vqClient.from('word_packs').update({
+                    words: mergedWords,
+                    story_data: { status: 'pending', reason: 'words_changed' }
+                }).eq('id', pid);
                 if (error) throw error;
-                toast(`✅ 成功追加 ${news.length} 个单词！`);
-                switchTeacherTab('pack'); // 无感重绘刷新UI
+                toast(`成功追加 ${mergedWords.length - oldWords.length} 个单词，正在重建专属世界`);
+                await switchTeacherTab('pack');
+                await generatePackStory(pid);
             } catch (e) {
                 console.error(e); toast('追加失败，请重试', 'err');
             }
         }
 
-        async function createPack() { const name = document.getElementById('m-pack-name').value.trim(); const icon = document.getElementById('m-pack-icon').value.trim() || '📖'; if (!name) return toast('请输入词包名', 'err'); const raw = document.getElementById('m-batch').value.trim(); const words = raw ? raw.split('\n').filter(l => l.trim() && !l.startsWith('#')).map(l => { const parts = l.split(/,|，|\t/); if (parts.length < 2) return null; const w = parts[0].trim(), m = parts[1].trim(), pos = parts[2] ? parts[2].trim() : ''; return (w && m) ? { w, m, pos } : null; }).filter(Boolean) : []; if (words.length < 4) return toast('词汇量太少', 'err'); await vqClient.from('word_packs').insert([{ id: 'p' + Date.now(), name, words, icon }]); closeModal('m-create'); document.getElementById('m-pack-name').value = ''; document.getElementById('m-batch').value = ''; toast(`词汇包"${name}"上传成功！`); switchTeacherTab('pack'); }
+        async function createPack() {
+            const name = document.getElementById('m-pack-name').value.trim();
+            const icon = document.getElementById('m-pack-icon').value.trim() || '📖';
+            if (!name) return toast('请输入词包名', 'err');
+            const raw = document.getElementById('m-batch').value.trim();
+            const words = raw ? raw.split('\n').filter(line => line.trim() && !line.startsWith('#')).map(line => {
+                const parts = line.split(/,|，|\t/);
+                if (parts.length < 2) return null;
+                const w = parts[0].trim();
+                const m = parts[1].trim();
+                const pos = parts[2] ? parts[2].trim() : '';
+                return w && m ? { w, m, pos } : null;
+            }).filter(Boolean) : [];
+            if (words.length < 4) return toast('词汇量太少', 'err');
+
+            const pack = {
+                id: `p${Date.now()}`,
+                name,
+                words,
+                icon,
+                story_data: { status: 'pending' }
+            };
+            const { data, error } = await vqClient.from('word_packs').insert([pack]).select('*').single();
+            if (error) return toast(`词包上传失败：${error.message}`, 'err');
+            closeModal('m-create');
+            document.getElementById('m-pack-name').value = '';
+            document.getElementById('m-batch').value = '';
+            window._teacherPacks = [data, ...(window._teacherPacks || [])];
+            toast(`词汇包“${name}”上传成功，开始生成专属世界`);
+            await generatePackStory(data.id);
+        }
         async function deletePack(id) { if (confirm('彻底删除此词包？')) { await vqClient.from('word_packs').delete().eq('id', id); switchTeacherTab('pack'); } }
 
         // ════ 学习管理 & 错题复习 ════
@@ -2067,6 +3044,9 @@
                 if (ws.length < 2 && G.levels.length) { G.levels[G.levels.length - 1].words.push(...ws); continue; }
                 G.levels.push({ idx: G.levels.length, words: ws });
             }
+            ensureMapState();
+            G.activeMapNode = '';
+            G.activeMapMode = 'balanced';
             startReviewLevel(reviewWords);
         }
         async function renderPackSelCloud() {
@@ -2080,10 +3060,10 @@
             c.innerHTML = assigned.map((a, i) => {
                 const pk = a.word_packs;
                 return `<div class="pack-radio" id="pr-${i}">
-                    <span style="font-size:24px;">${pk.icon || '📖'}</span> 
+                    <span style="font-size:24px;">${escH(pk.icon || '📖')}</span>
                     <div>
-                        <div style="font-size:var(--fs-body);font-weight:600;">${pk.name}</div>
-                        <div style="font-family:var(--px);font-size:7px;color:var(--dim);margin-top:2px;">${pk.words.length} WORDS</div>
+                        <div style="font-size:var(--fs-body);font-weight:600;">${escH(pk.name)}</div>
+                        <div style="font-family:var(--px);font-size:7px;color:var(--dim);margin-top:2px;">${Array.isArray(pk.words) ? pk.words.length : 0} WORDS</div>
                     </div>
                 </div>`;
             }).join('');
@@ -2113,6 +3093,8 @@
                 if (ws.length < 2 && G.levels.length) { G.levels[G.levels.length - 1].words.push(...ws); continue; }
                 G.levels.push({ idx: G.levels.length, words: ws });
             }
+            ensureMapState();
+            await syncContextProgress();
             renderMap(); go('s-map');
         }
 
@@ -2149,6 +3131,166 @@
             emEl.style.filter = 'none';
             updateMonHp();
         }
+        function mapVersionForPack() {
+            const words = G.pack?.words || [];
+            const first = words[0]?.w || '';
+            const last = words[words.length - 1]?.w || '';
+            return `map-v1:${G.pack?.id || 'pack'}:${words.length}:${first}:${last}`;
+        }
+
+        function ensureMapState() {
+            const version = mapVersionForPack();
+            const previous = G.prog.mapState;
+            if (!previous || previous.version !== version) {
+                const completed = { camp: true };
+                (G.prog.cleared || []).forEach(level => {
+                    completed[`memory-${level}`] = true;
+                    completed[`sound-${level}`] = true;
+                    completed[`spelling-${level}`] = true;
+                });
+                const migratedLevel = Math.max(-1, ...(G.prog.cleared || []).map(Number));
+                G.prog.mapState = {
+                    version,
+                    completed,
+                    attempts: {},
+                    skills: previous?.skills || {
+                        meaning: { correct: 0, total: 0 },
+                        listening: { correct: 0, total: 0 },
+                        spelling: { correct: 0, total: 0 },
+                        context: { correct: 0, total: 0 }
+                    },
+                    history: [],
+                    currentNode: migratedLevel >= 0 ? `spelling-${migratedLevel}` : 'camp'
+                };
+            }
+            const state = G.prog.mapState;
+            state.completed ||= { camp: true };
+            state.completed.camp = true;
+            state.attempts ||= {};
+            state.history ||= [];
+            state.skills ||= {};
+            ['meaning', 'listening', 'spelling', 'context'].forEach(skill => {
+                state.skills[skill] ||= { correct: 0, total: 0 };
+            });
+            return state;
+        }
+
+        function getReviewWords() {
+            return [...(G.prog.wrongWords || []), ...(G.prog.unfamiliar || [])]
+                .filter((word, index, list) => word?.w && list.findIndex(item => item.w === word.w) === index);
+        }
+
+        function skillAccuracy(skill) {
+            const data = ensureMapState().skills[skill];
+            return data.total ? Math.round(data.correct / data.total * 100) : null;
+        }
+
+        function buildLearningMap() {
+            const state = ensureMapState();
+            const completed = state.completed;
+            const reviewWords = getReviewWords();
+            const segmentCount = G.levels.length;
+            const width = Math.max(1040, 520 + segmentCount * 230);
+            const nodes = [];
+            const links = [];
+            const addNode = node => nodes.push(node);
+            const addLink = (from, to) => links.push({ from, to });
+            const nodeState = (id, available) => completed[id] ? 'done' : (available ? 'available' : 'locked');
+
+            addNode({ id: 'camp', type: 'camp', x: 90, y: 300, icon: '🏕️', name: '探险营地', meta: `${G.pack.words.length} 个词`, state: 'done' });
+
+            for (let i = 0; i < segmentCount; i++) {
+                const x = 260 + i * 230;
+                const previousReady = i === 0 ||
+                    (completed[`memory-${i - 1}`] && (completed[`sound-${i - 1}`] || completed[`spelling-${i - 1}`]));
+                const memoryId = `memory-${i}`;
+                const soundId = `sound-${i}`;
+                const spellingId = `spelling-${i}`;
+                const memoryReady = Boolean(completed[memoryId]);
+
+                addNode({
+                    id: memoryId, type: 'memory', level: i, x, y: 300, icon: '🧠',
+                    name: `记忆森林 ${i + 1}`, meta: `${G.levels[i].words.length} 词 · 识义`,
+                    state: nodeState(memoryId, previousReady)
+                });
+                addNode({
+                    id: soundId, type: 'sound', level: i, x, y: 125, icon: '🎧',
+                    name: `回声峡谷 ${i + 1}`, meta: '可选 · 听音辨义',
+                    state: nodeState(soundId, memoryReady)
+                });
+                addNode({
+                    id: spellingId, type: 'spelling', level: i, x, y: 475, icon: '✍️',
+                    name: `拼写熔炉 ${i + 1}`, meta: '可选 · 主动拼写',
+                    state: nodeState(spellingId, memoryReady)
+                });
+
+                addLink(i === 0 ? 'camp' : `sound-${i - 1}`, memoryId);
+                if (i > 0) addLink(`spelling-${i - 1}`, memoryId);
+                addLink(memoryId, soundId);
+                addLink(memoryId, spellingId);
+            }
+
+            const finalX = 300 + segmentCount * 230;
+            const mainReady = Array.from({ length: segmentCount }, (_, i) =>
+                completed[`memory-${i}`] && (completed[`sound-${i}`] || completed[`spelling-${i}`])
+            ).every(Boolean);
+            const contextId = 'context';
+            const contextDone = Boolean(completed[contextId]);
+            const needsReview = reviewWords.length >= 2;
+            const reviewReady = contextDone && needsReview;
+            const bossReady = contextDone && (!needsReview || completed.review);
+
+            addNode({
+                id: contextId, type: 'context', x: finalX, y: 300, icon: '🏙️',
+                name: '语境城邦', meta: '句子选词填空',
+                state: nodeState(contextId, mainReady)
+            });
+            addNode({
+                id: 'review', type: 'review', x: finalX + 200, y: 475, icon: '🧭',
+                name: '薄弱词修复站', meta: needsReview ? `${reviewWords.length} 个词待强化` : '当前没有薄弱词',
+                state: completed.review ? 'done' : (reviewReady ? 'available' : 'locked')
+            });
+            addNode({
+                id: 'boss', type: 'boss', x: finalX + 410, y: 300, icon: '🏰',
+                name: '词包守卫战', meta: '综合挑战',
+                state: nodeState('boss', bossReady)
+            });
+
+            if (segmentCount) {
+                addLink(`sound-${segmentCount - 1}`, contextId);
+                addLink(`spelling-${segmentCount - 1}`, contextId);
+            } else {
+                addLink('camp', contextId);
+            }
+            addLink(contextId, 'boss');
+            addLink(contextId, 'review');
+            addLink('review', 'boss');
+
+            let recommended = nodes.find(node => node.type === 'memory' && node.state === 'available');
+            if (!recommended) {
+                for (let i = 0; i < segmentCount; i++) {
+                    const memoryDone = completed[`memory-${i}`];
+                    const sound = nodes.find(node => node.id === `sound-${i}`);
+                    const spelling = nodes.find(node => node.id === `spelling-${i}`);
+                    const branchFinished = completed[`sound-${i}`] || completed[`spelling-${i}`];
+                    if (!memoryDone || branchFinished || (sound.state !== 'available' && spelling.state !== 'available')) continue;
+                    const listening = skillAccuracy('listening');
+                    const writing = skillAccuracy('spelling');
+                    recommended = listening === null && writing === null
+                        ? (i % 2 ? spelling : sound)
+                        : ((listening ?? 0) <= (writing ?? 0) ? sound : spelling);
+                    break;
+                }
+            }
+            if (!recommended) recommended = nodes.find(node => node.id === contextId && node.state === 'available');
+            if (!recommended) recommended = nodes.find(node => node.id === 'review' && node.state === 'available');
+            if (!recommended) recommended = nodes.find(node => node.id === 'boss' && node.state === 'available');
+            if (!recommended) recommended = nodes.find(node => node.state === 'available') || nodes[nodes.length - 1];
+            if (recommended) recommended.recommended = true;
+
+            return { width: finalX + 520, height: 600, nodes, links, recommended, reviewWords };
+        }
+
         function renderMap() {
             document.getElementById('map-packname').textContent = G.pack.name;
             document.getElementById('map-title').textContent = G.pack.name;
@@ -2159,6 +3301,7 @@
             document.getElementById('xp-label').textContent = `LV.${lvInfo.lv} ${tObj.title}  |  XP: ${lvInfo.cur}/${lvInfo.need}  |  通关: ${G.prog.cleared.length}/${G.levels.length}`;
             document.getElementById('xp-label').style.color = tObj.color;
             document.getElementById('xp-fill').style.width = (lvInfo.cur / lvInfo.need * 100).toFixed(1) + '%';
+            renderJourneyPanel();
 
             const grid = document.getElementById('map-grid'); grid.innerHTML = '';
             G.levels.forEach((lv, i) => {
@@ -2173,25 +3316,249 @@
                     <div class="lvl-count">${lv.words.length} words</div>
                     ${cl ? '<div style="font-family:var(--px);font-size:7px;color:var(--green);margin-top:3px;">CLEARED</div>' : ''}
                     ${lk ? '<div style="font-size:20px;margin-top:3px;">🔒</div>' : ''}`;
-                if (!lk) d.onclick = () => cl ? openReviewModal(i) : startLevel(i);
+                if (!lk) d.onclick = () => cl ? openReviewModal(i) : startLevel(i, 'balanced', '');
                 grid.appendChild(d);
             });
+        }
+
+        function saveProgress() {
+            if (!G.userId || !G.pack || !G.prog) return Promise.resolve();
+            return vqClient.from('student_progress').upsert(
+                { user_id: G.userId, pack_id: G.pack.id, prog_data: G.prog, student_name: G.name },
+                { onConflict: 'user_id, pack_id' }
+            ).then(({ error }) => {
+                if (error) console.warn('学习地图保存失败:', error);
+            });
+        }
+
+        async function syncContextProgress() {
+            if (!G.userId || !G.pack) return;
+            try {
+                const { data, error } = await vqClient.from('fillblank_stage_results')
+                    .select('correct_count,total_count')
+                    .eq('user_id', G.userId)
+                    .eq('pack_id', G.pack.id);
+                if (error || !data?.length) return;
+                const totals = data.reduce((sum, row) => ({
+                    correct: sum.correct + (Number(row.correct_count) || 0),
+                    total: sum.total + (Number(row.total_count) || 0)
+                }), { correct: 0, total: 0 });
+                const state = ensureMapState();
+                state.skills.context = totals;
+                const hasQualifiedResult = data.some(row =>
+                    Number(row.total_count) >= 4 &&
+                    Number(row.correct_count) / Number(row.total_count) >= .7
+                );
+                if (hasQualifiedResult) {
+                    state.completed.context = true;
+                }
+            } catch (error) {
+                console.warn('填空路线同步失败:', error);
+            }
+        }
+
+        function renderJourneyPanel() {
+            G.mapGraph = buildLearningMap();
+            const { nodes, links, width, height, recommended, reviewWords } = G.mapGraph;
+            const state = ensureMapState();
+            const countedNodes = nodes.filter(node => node.type !== 'camp');
+            const doneCount = countedNodes.filter(node => node.state === 'done').length;
+            const progress = countedNodes.length ? Math.round(doneCount / countedNodes.length * 100) : 0;
+            const byId = Object.fromEntries(nodes.map(node => [node.id, node]));
+            const curve = link => {
+                const from = byId[link.from], to = byId[link.to];
+                const bend = Math.max(55, Math.abs(to.x - from.x) * .42);
+                return `M ${from.x} ${from.y} C ${from.x + bend} ${from.y}, ${to.x - bend} ${to.y}, ${to.x} ${to.y}`;
+            };
+            const lineClass = link => {
+                const from = byId[link.from], to = byId[link.to];
+                if (to.recommended) return 'recommended';
+                if (from.state === 'done' && to.state === 'done') return 'done';
+                if (from.state === 'done' && to.state === 'available') return 'available';
+                return '';
+            };
+            const stateIcon = node => node.state === 'done' ? '✓' : (node.state === 'locked' ? '🔒' : (node.recommended ? '★' : ''));
+            const currentNode = state.currentNode;
+            const world = document.getElementById('journey-track');
+            world.style.width = `${width}px`;
+            world.style.height = `${height}px`;
+            world.innerHTML = `
+                <div class="world-map-zone sound" style="left:155px;top:42px;width:${width - 310}px;height:165px;"><strong>回声峡谷 · LISTENING</strong></div>
+                <div class="world-map-zone memory" style="left:155px;top:220px;width:${width - 310}px;height:160px;"><strong>记忆森林 · MEANING</strong></div>
+                <div class="world-map-zone spelling" style="left:155px;top:393px;width:${width - 310}px;height:165px;"><strong>拼写熔炉 · SPELLING</strong></div>
+                <svg class="world-map-lines" viewBox="0 0 ${width} ${height}" aria-hidden="true">
+                    ${links.map(link => `<path class="world-map-line ${lineClass(link)}" d="${curve(link)}"></path>`).join('')}
+                </svg>
+                ${nodes.map(node => `
+                    <button class="world-node ${node.state} ${node.recommended ? 'recommended' : ''} ${currentNode === node.id ? 'current' : ''}"
+                        style="left:${node.x}px;top:${node.y}px;"
+                        type="button" ${node.state === 'locked' ? 'disabled' : ''}
+                        onclick="startMapNode('${node.id}')"
+                        aria-label="${escH(node.name)}，${escH(node.meta)}">
+                        <span class="world-node-state">${stateIcon(node)}</span>
+                        <span class="world-node-icon">${node.icon}</span>
+                        <span class="world-node-name">${escH(node.name)}</span>
+                        <span class="world-node-meta">${escH(node.meta)}</span>
+                    </button>`).join('')}
+            `;
+
+            document.getElementById('journey-percent').textContent = `${progress}%`;
+            document.getElementById('journey-summary').textContent =
+                `整张地图已展开 · ${doneCount}/${countedNodes.length} 个地点完成 · ${reviewWords.length} 个词需要强化`;
+            const title = document.getElementById('journey-next-title');
+            const copy = document.getElementById('journey-next-copy');
+            const action = document.getElementById('journey-action');
+            if (recommended) {
+                title.textContent = `推荐：${recommended.name}`;
+                const routeReason = recommended.type === 'sound'
+                    ? '当前更适合加强听音辨义；也可以自行选择同层的拼写路线。'
+                    : recommended.type === 'spelling'
+                        ? '当前更适合加强主动拼写；也可以自行选择同层的听辨路线。'
+                        : recommended.type === 'review'
+                            ? '系统根据错题记录开启了薄弱词修复路线。'
+                            : '完成这里即可继续解锁后面的地图区域。';
+                copy.textContent = routeReason;
+                action.textContent = `前往${recommended.name}`;
+                action.onclick = () => startMapNode(recommended.id);
+            } else {
+                title.textContent = '词包地图已完成';
+                copy.textContent = '你仍可点击任何已完成地点再次练习。';
+                action.textContent = '查看学习记录';
+                action.onclick = openLearningMgmt;
+            }
+
+            requestAnimationFrame(() => {
+                const viewport = document.getElementById('world-map-viewport');
+                const target = world.querySelector('.world-node.recommended') || world.querySelector('.world-node.current');
+                if (target && viewport.scrollWidth > viewport.clientWidth) {
+                    viewport.scrollLeft = Math.max(0, target.offsetLeft - viewport.clientWidth / 2);
+                }
+            });
+            enableMapDragging(document.getElementById('world-map-viewport'));
+        }
+
+        function enableMapDragging(viewport) {
+            if (!viewport || viewport.dataset.dragBound === 'true') return;
+            viewport.dataset.dragBound = 'true';
+            let pointerId = null;
+            let startX = 0;
+            let startY = 0;
+            let startScroll = 0;
+            let dragged = false;
+            let suppressClickUntil = 0;
+            viewport.addEventListener('pointerdown', event => {
+                if (event.pointerType === 'mouse' && event.button !== 0) return;
+                if (event.pointerType === 'touch') return;
+                pointerId = event.pointerId;
+                startX = event.clientX;
+                startY = event.clientY;
+                startScroll = viewport.scrollLeft;
+                dragged = false;
+                try { viewport.setPointerCapture(pointerId); } catch (error) {}
+            });
+            viewport.addEventListener('pointermove', event => {
+                if (event.pointerId !== pointerId) return;
+                const distanceX = event.clientX - startX;
+                const distanceY = event.clientY - startY;
+                if (Math.abs(distanceX) > 6 && Math.abs(distanceX) > Math.abs(distanceY)) {
+                    dragged = true;
+                    viewport.classList.add('dragging');
+                    viewport.scrollLeft = startScroll - distanceX;
+                }
+            });
+            const finish = event => {
+                if (event.pointerId !== pointerId) return;
+                viewport.classList.remove('dragging');
+                try {
+                    if (viewport.hasPointerCapture(pointerId)) viewport.releasePointerCapture(pointerId);
+                } catch (error) {}
+                pointerId = null;
+                if (dragged) suppressClickUntil = Date.now() + 350;
+                setTimeout(() => { dragged = false; }, 0);
+            };
+            viewport.addEventListener('pointerup', finish);
+            viewport.addEventListener('pointercancel', finish);
+            let touchStartX = 0;
+            let touchStartY = 0;
+            let touchStartScroll = 0;
+            let touchDragging = false;
+            viewport.addEventListener('touchstart', event => {
+                if (event.touches.length !== 1) return;
+                touchStartX = event.touches[0].clientX;
+                touchStartY = event.touches[0].clientY;
+                touchStartScroll = viewport.scrollLeft;
+                touchDragging = false;
+            }, { passive: true });
+            viewport.addEventListener('touchmove', event => {
+                if (event.touches.length !== 1) return;
+                const distanceX = event.touches[0].clientX - touchStartX;
+                const distanceY = event.touches[0].clientY - touchStartY;
+                if (Math.abs(distanceX) <= 5 || Math.abs(distanceX) <= Math.abs(distanceY)) return;
+                touchDragging = true;
+                dragged = true;
+                viewport.classList.add('dragging');
+                viewport.scrollLeft = touchStartScroll - distanceX;
+                event.preventDefault();
+            }, { passive: false });
+            const finishTouch = () => {
+                viewport.classList.remove('dragging');
+                if (touchDragging) suppressClickUntil = Date.now() + 350;
+                touchDragging = false;
+                setTimeout(() => { dragged = false; }, 0);
+            };
+            viewport.addEventListener('touchend', finishTouch, { passive: true });
+            viewport.addEventListener('touchcancel', finishTouch, { passive: true });
+            viewport.addEventListener('click', event => {
+                if (!dragged && Date.now() >= suppressClickUntil) return;
+                event.preventDefault();
+                event.stopPropagation();
+            }, true);
+        }
+
+        function startMapNode(nodeId) {
+            const graph = G.mapGraph || buildLearningMap();
+            const node = graph.nodes.find(item => item.id === nodeId);
+            if (!node || node.state === 'locked') return toast('这个地点还没有解锁', 'err');
+            const mapState = ensureMapState();
+            mapState.currentNode = node.id;
+            mapState.history.push({ node: node.id, at: new Date().toISOString() });
+            mapState.history = mapState.history.slice(-40);
+            G.activeMapNode = node.id;
+            G.activeMapMode = node.type;
+
+            if (node.type === 'camp') return renderJourneyPanel();
+            if (['memory', 'sound', 'spelling'].includes(node.type)) return startLevel(node.level, node.type, node.id);
+            if (node.type === 'review') return startReviewLevel(graph.reviewWords);
+            if (node.type === 'context') {
+                saveProgress();
+                location.href = `./fillblank.html?pack=${encodeURIComponent(G.pack.id)}&from=map`;
+                return;
+            }
+            if (node.type === 'boss') {
+                saveProgress();
+                location.href = `./boss.html?pack=${encodeURIComponent(G.pack.id)}&from=map`;
+            }
         }
 
         function openReviewModal(li) {
             const lv = G.levels[li];
             document.getElementById('review-title').textContent = `LEVEL ${li + 1} 回顾`;
-            document.getElementById('review-word-list').innerHTML = lv.words.map(w => `<div style="display:flex;align-items:center;justify-content:space-between;background:rgba(0,0,0,.3);padding:12px 14px;border-radius:4px;border:1px solid var(--border);"><span style="font-weight:bold;color:var(--cyan);font-size:15px;">${w.w}${w.pos ? `<span style="color:var(--purple);font-size:10px;font-family:var(--px);margin-left:8px;">${w.pos}</span>` : ''}</span><span style="color:var(--dim);font-size:13px;text-align:right;">${w.m}</span></div>`).join('');
-            document.getElementById('btn-rechallenge').onclick = () => { closeModal('m-review'); startLevel(li); };
+            document.getElementById('review-word-list').innerHTML = lv.words.map(w => `<div style="display:flex;align-items:center;justify-content:space-between;background:rgba(0,0,0,.3);padding:12px 14px;border-radius:4px;border:1px solid var(--border);"><span style="font-weight:bold;color:var(--cyan);font-size:15px;">${escH(w.w)}${w.pos ? `<span style="color:var(--purple);font-size:10px;font-family:var(--px);margin-left:8px;">${escH(w.pos)}</span>` : ''}</span><span style="color:var(--dim);font-size:13px;text-align:right;">${escH(w.m)}</span></div>`).join('');
+            document.getElementById('btn-rechallenge').onclick = () => {
+                closeModal('m-review');
+                startLevel(li, 'balanced', '');
+            };
             openModal('m-review');
         }
 
         // ════ 100% 完美复原 战斗系统 (四大 Stage 引擎) ════
         function shuffle(a) { for (let i = a.length - 1; i > 0; i--) { const j = Math.floor(Math.random() * (i + 1));[a[i], a[j]] = [a[j], a[i]]; } return a; }
 
-        function startLevel(li) {
+        function startLevel(li, mode = 'balanced', mapNodeId = '') {
             initAudio();
             G.isReview = false;
+            G.activeMapNode = mapNodeId;
+            G.activeMapMode = mode;
             const lv = G.levels[li];
             G.lvIdx = li; G.lvWords = lv.words;
             G.hp = 5; G.maxHp = 5;
@@ -2206,10 +3573,17 @@
                 s2.push(makeQ(wd, 'audio', pool));
                 s3.push(makeQ(wd, 'fill', pool));
             });
-            G.stages = [shuffle(s0), shuffle(s1), shuffle(s2), shuffle(s3)];
+            const modeStages = {
+                memory: [s0, s1],
+                sound: [s2, s0],
+                spelling: [s3, s1],
+                balanced: [s0, s1, s2, s3]
+            };
+            G.stages = (modeStages[mode] || modeStages.balanced).map(stage => shuffle(stage));
             G.stgIdx = 0; G.qs = G.stages[0]; G.qIdx = 0;
 
-            document.getElementById('m-label').textContent = `LV.${li + 1}`;
+            const modeNames = { memory: '记忆', sound: '听辨', spelling: '拼写', balanced: `LV.${li + 1}` };
+            document.getElementById('m-label').textContent = modeNames[mode] || `LV.${li + 1}`;
             document.getElementById('mon-em').className = 'mon-emoji float-anim';
             updateMonsterView(); updatePHp(); renderDots(); updateScore(); go('s-battle'); showQ();
         }
@@ -2230,10 +3604,10 @@
             const cleanPool = pool.filter(w => w.w && w.m && /[\u4e00-\u9fa5]/.test(w.m) && /[a-zA-Z]/.test(w.w));
             const posLabel = wd.pos ? ` (${wd.pos})` : '';
             const dists = shuffle(cleanPool.filter(w => w.w !== wd.w)).slice(0, 3);
-            if (type === 'mcq-zh') { const opts = shuffle([wd, ...dists]); return { type: 'mcq', label: '看中文 → 选英文', q: wd.m + posLabel, hint: 'Choose the correct English word ↓', ans: wd.w, opts: opts.map(o => ({ t: o.w, ok: o.w === wd.w })) }; }
-            else if (type === 'mcq-en') { const opts = shuffle([wd, ...dists]); return { type: 'mcq', label: '看英文 → 选中文', q: wd.w + posLabel, hint: '选出正确的中文意思 ↓', ans: wd.m, opts: opts.map(o => ({ t: o.m, ok: o.m === wd.m })) }; }
-            else if (type === 'audio') { const opts = shuffle([wd, ...dists]); return { type: 'mcq-audio', label: '听发音 → 选中文', audioTxt: wd.w, hint: 'Listen and choose the meaning ↓' + (wd.pos ? ` · ${wd.pos}` : ''), ans: wd.m, opts: opts.map(o => ({ t: o.m, ok: o.m === wd.m })) }; }
-            else { return { type: 'fill', label: '看中文 → 拼写英文', q: wd.m + posLabel, hint: 'Type the English word below', ans: wd.w, opts: [] }; }
+            if (type === 'mcq-zh') { const opts = shuffle([wd, ...dists]); return { type: 'mcq', skill: 'meaning', label: '看中文 → 选英文', q: wd.m + posLabel, hint: 'Choose the correct English word ↓', ans: wd.w, opts: opts.map(o => ({ t: o.w, ok: o.w === wd.w })) }; }
+            else if (type === 'mcq-en') { const opts = shuffle([wd, ...dists]); return { type: 'mcq', skill: 'meaning', label: '看英文 → 选中文', q: wd.w + posLabel, hint: '选出正确的中文意思 ↓', ans: wd.m, opts: opts.map(o => ({ t: o.m, ok: o.m === wd.m })) }; }
+            else if (type === 'audio') { const opts = shuffle([wd, ...dists]); return { type: 'mcq-audio', skill: 'listening', label: '听发音 → 选中文', audioTxt: wd.w, hint: 'Listen and choose the meaning ↓' + (wd.pos ? ` · ${wd.pos}` : ''), ans: wd.m, opts: opts.map(o => ({ t: o.m, ok: o.m === wd.m })) }; }
+            else { return { type: 'fill', skill: 'spelling', label: '看中文 → 拼写英文', q: wd.m + posLabel, hint: 'Type the English word below', ans: wd.w, opts: [] }; }
         }
 
         function showQ() {
@@ -2253,7 +3627,17 @@
                 setTimeout(() => fi.focus(), 150);
             } else {
                 fr.style.display = 'none'; og.style.display = 'grid'; og.innerHTML = '';
-                if (q.type === 'mcq-audio') { document.getElementById('q-text').innerHTML = `<button class="btn btn-cyan" style="padding:10px 20px;font-size:16px;" onclick="playAudio('${q.audioTxt}')">🔊 播放读音 Play</button>`; playAudio(q.audioTxt); }
+                if (q.type === 'mcq-audio') {
+                    const qText = document.getElementById('q-text');
+                    const audioButton = document.createElement('button');
+                    qText.textContent = '';
+                    audioButton.className = 'btn btn-cyan';
+                    audioButton.style.cssText = 'padding:10px 20px;font-size:16px;';
+                    audioButton.textContent = '🔊 播放读音 Play';
+                    audioButton.addEventListener('click', () => playAudio(q.audioTxt));
+                    qText.appendChild(audioButton);
+                    playAudio(q.audioTxt);
+                }
                 else { document.getElementById('q-text').textContent = q.q; }
                 q.opts.forEach(opt => {
                     const b = document.createElement('button'); b.className = 'opt'; b.textContent = opt.t;
@@ -2274,11 +3658,36 @@
             if (fBtn.textContent === '继续 Continue') { nextQ(); return; }
             const ans = fi.value.trim().toLowerCase(), correct = G.qs[G.qIdx].ans.toLowerCase();
             if (ans === correct) { fi.style.borderColor = 'var(--green)'; onCorrect(); setTimeout(() => nextQ(), 1300); }
-            else { fi.style.borderColor = 'var(--red)'; fi.disabled = true; document.getElementById('q-hint').innerHTML = `<span style="color:var(--red); font-size: 14px; font-weight: bold;">✗ 正确拼写: ${G.qs[G.qIdx].ans}</span>`; fBtn.textContent = '继续 Continue'; fBtn.className = 'btn btn-red'; onWrong(); if (G.hp <= 0) { setTimeout(() => endLevel(), 1300); return; } }
+            else {
+                fi.style.borderColor = 'var(--red)'; fi.disabled = true;
+                const hint = document.getElementById('q-hint');
+                hint.textContent = `✗ 正确拼写: ${G.qs[G.qIdx].ans}`;
+                hint.style.cssText = 'color:var(--red);font-size:14px;font-weight:bold;';
+                fBtn.textContent = '继续 Continue'; fBtn.className = 'btn btn-red'; onWrong();
+                if (G.hp <= 0) { setTimeout(() => endLevel(), 1300); return; }
+            }
         }
 
-        function onCorrect() { G.correct++; G.total++; G.streak++; G.maxStreak = Math.max(G.maxStreak, G.streak); const dmg = 2 + Math.floor(G.streak / 3); G.mhp = Math.max(0, G.mhp - dmg); G.score += (10 + G.streak * 5); updateMonHp(); updateScore(); playSfx('win'); flashFX('ok'); spawnDmg(dmg, 'hit'); animMon(); if (G.streak >= 3) document.getElementById('streak-el').innerHTML = `<span class="streak-badge">🔥 ${G.streak} 连击!</span>`; }
+        function recordMapSkill(ok) {
+            const skill = G.qs[G.qIdx]?.skill;
+            if (!skill || !G.prog) return;
+            const stats = ensureMapState().skills[skill];
+            stats.total++;
+            if (ok) stats.correct++;
+        }
+
+        function onCorrect() {
+            recordMapSkill(true);
+            G.correct++; G.total++; G.streak++;
+            G.maxStreak = Math.max(G.maxStreak, G.streak);
+            const dmg = 2 + Math.floor(G.streak / 3);
+            G.mhp = Math.max(0, G.mhp - dmg);
+            G.score += (10 + G.streak * 5);
+            updateMonHp(); updateScore(); playSfx('win'); flashFX('ok'); spawnDmg(dmg, 'hit'); animMon();
+            if (G.streak >= 3) document.getElementById('streak-el').innerHTML = `<span class="streak-badge">🔥 ${G.streak} 连击!</span>`;
+        }
         function onWrong() {
+            recordMapSkill(false);
             G.total++; G.streak = 0; G.hp--; updatePHp(); playSfx('lose'); flashFX('err'); document.getElementById('streak-el').innerHTML = '';
             // 记录错题：1次 → 不太熟悉，2次+ → 需要复习，并立即保存到云端
             const q = G.qs[G.qIdx];
@@ -2321,11 +3730,26 @@
         async function endLevel() {
             const win = G.hp > 0, prog = G.prog, lvls = G.levels, newBadges = [];
             const xpGain = G.isReview ? Math.floor(G.score * 0.4) : G.score; // 复习关卡得40%经验
+            const mapState = ensureMapState();
+            if (G.activeMapNode) {
+                mapState.attempts[G.activeMapNode] = (mapState.attempts[G.activeMapNode] || 0) + 1;
+            }
             if (win) {
                 const oldXp = prog.xp || 0;
                 const oldLvInfo = calcLevel(oldXp);
+                if (G.activeMapNode) {
+                    mapState.completed[G.activeMapNode] = true;
+                    mapState.currentNode = G.activeMapNode;
+                    mapState.history.push({ node: G.activeMapNode, result: 'completed', at: new Date().toISOString() });
+                    mapState.history = mapState.history.slice(-40);
+                }
                 if (!G.isReview) {
-                    if (!prog.cleared.includes(G.lvIdx)) prog.cleared.push(G.lvIdx);
+                    const segmentFinished = G.activeMapNode
+                        ? (isStoryChapterNode(G.activeMapNode) ||
+                            (mapState.completed[`memory-${G.lvIdx}`] &&
+                                (mapState.completed[`sound-${G.lvIdx}`] || mapState.completed[`spelling-${G.lvIdx}`])))
+                        : true;
+                    if (segmentFinished && !prog.cleared.includes(G.lvIdx)) prog.cleared.push(G.lvIdx);
                 }
                 prog.xp = (prog.xp || 0) + xpGain;
                 const newLvInfo = calcLevel(prog.xp);
@@ -2346,13 +3770,81 @@
                 }
                 G.prog = prog;
                 try { await vqClient.from('student_progress').upsert({ user_id: G.userId, pack_id: G.pack.id, prog_data: prog, student_name: G.name }, { onConflict: 'user_id, pack_id' }); } catch (e) { console.warn(e); }
+
+                // 无论是否得宠物，都保存喂养币 + 等级称号到数据库
+                if (!G.isReview && G.userId) {
+                    try {
+                        const {data:ach} = await vqClient.from('student_achievements').select('*').eq('user_id', G.userId).maybeSingle();
+                        const pets = Array.isArray(ach?.pets) ? [...ach.pets] : [];
+                        const titles = Array.isArray(ach?.titles) ? [...(ach?.titles||[])] : [];
+                        const activePet = ach?.active_pet || '';
+                        const coins = (ach?.feed_coins && typeof ach.feed_coins==='object') ? {...ach.feed_coins} : {};
+
+                        // Bug2修复：每次通关都累计喂养币
+                        coins['vocaquest'] = (coins['vocaquest']||0) + Math.floor(G.correct * 2);
+
+                        // Bug3修复：把当前等级称号存入titles数组
+                        const lvInfo2 = calcLevel(prog.xp || 0);
+                        const currentTitle = getTitleObj(lvInfo2.lv).title;
+                        if (currentTitle && !titles.includes(currentTitle)) {
+                            titles.push(currentTitle);
+                        }
+                        // 升级时把新称号也加入
+                        if (G._lvUp) {
+                            const newTitle = getTitleObj(G._lvUp.to).title;
+                            if (newTitle && !titles.includes(newTitle)) titles.push(newTitle);
+                        }
+                        // active_title 用最高等级称号
+                        const activeTitle = currentTitle || ach?.active_title || '';
+
+                        // 随机获得宠物（15%概率，满血25%）
+                        const petChance = G.hp === G.maxHp ? 0.25 : 0.15;
+                        if (Math.random() < petChance) {
+                            const vqPets = [
+                                {emoji:'🐱',name:'小猫咪'},{emoji:'🐶',name:'小狗狗'},{emoji:'🐰',name:'小兔子'},
+                                {emoji:'🐻',name:'小熊熊'},{emoji:'🐼',name:'熊猫宝'},{emoji:'🦝',name:'小浣熊'},
+                                {emoji:'🐨',name:'树袋熊'},{emoji:'🐹',name:'小仓鼠'},{emoji:'🦉',name:'猫头鹰'},
+                                {emoji:'🐸',name:'小青蛙'},{emoji:'🦔',name:'小刺猬'},{emoji:'🐮',name:'小奶牛'},
+                            ];
+                            const newPet = {...vqPets[Math.floor(Math.random()*vqPets.length)], tool:'vocaquest', level:1, xp:0};
+                            if (!pets.some(p => p.emoji === newPet.emoji)) {
+                                pets.push(newPet);
+                                G._newPet = newPet;
+                            }
+                        }
+
+                        // 一次性保存所有字段
+                        await vqClient.from('student_achievements').upsert({
+                            user_id: G.userId, pets, titles,
+                            active_pet: activePet, active_title: activeTitle,
+                            feed_coins: coins, updated_at: new Date().toISOString()
+                        }, {onConflict:'user_id'});
+                    } catch(e) { console.warn('成就保存失败', e); }
+                }
             }
+            if (!win && G.activeMapNode) {
+                mapState.history.push({ node: G.activeMapNode, result: 'retry', at: new Date().toISOString() });
+                mapState.history = mapState.history.slice(-40);
+            }
+            await saveProgress();
 
             document.getElementById('res-icon').textContent = win ? '🏆' : '💀';
             const rt = document.getElementById('res-title'); rt.textContent = win ? (G.isReview ? '复习完成!' : 'STAGE CLEAR!') : 'GAME OVER'; rt.className = 'res-title ' + (win ? 'win' : 'lose');
             const lvInfo = calcLevel(prog.xp || 0); const tObj = getTitleObj(lvInfo.lv);
             let resMsg = win ? `太棒了 ${G.name}！获得 ${xpGain} XP！${G.isReview ? '<br><span style="color:var(--dim);font-size:12px;">复习奖励 40% 经验</span>' : ''}` : `没关系 ${G.name}，失败是成功之母～再试一次吧！`;
             if (win && G._lvUp) resMsg += `<br><span style="color:${tObj.color};font-family:var(--px);font-size:10px;">🎉 升级！LV.${G._lvUp.from} → LV.${G._lvUp.to} ${tObj.title}</span>`;
+            if (win && G._newPet) resMsg += `<br><br><span style="font-size:28px">${G._newPet.emoji}</span><br><span style="color:var(--gold);font-family:var(--px);font-size:8px;letter-spacing:2px">✨ 获得新宠物：${G._newPet.name}！</span>`;
+            G._newPet = null;
+            // 显示"还差X关得宠物"提示（每5关必得一只）
+            if (win && !G.isReview) {
+                const clearedCount = prog.cleared.length;
+                const nextPetIn = 5 - (clearedCount % 5);
+                if (nextPetIn < 5) {
+                    resMsg += `<br><span style="color:var(--cyan);font-family:var(--px);font-size:7px;letter-spacing:1px">🐾 还差 ${nextPetIn} 关必得新宠物！</span>`;
+                } else {
+                    resMsg += `<br><span style="color:var(--gold);font-family:var(--px);font-size:7px;letter-spacing:1px">🎁 下一关有机会得宠物！</span>`;
+                }
+            }
             document.getElementById('res-msg').innerHTML = resMsg;
             document.getElementById('r-score').textContent = xpGain + ' XP';
             document.getElementById('r-acc').textContent = `${G.correct}/${G.total}`;
@@ -2365,12 +3857,21 @@
             const ba = document.getElementById('new-badge-area');
             if (newBadges.length) { ba.style.display = 'block'; document.getElementById('new-badge-list').innerHTML = newBadges.map(bid => { const b = BADGES.find(x => x.id === bid); return b ? `<div class="badge-box"><div class="badge-em">${b.e}</div><div class="badge-nm">${b.n}</div></div>` : ''; }).join(''); } else ba.style.display = 'none';
 
+            renderStoryResult(win);
             const rb = document.getElementById('res-btns'); rb.innerHTML = '';
-            if (G.isReview) {
+            if (G.activeMapNode) {
+                if (!win && !G.isReview) {
+                    rb.innerHTML += `<button class="btn btn-red" onclick="startLevel(${G.lvIdx}, '${G.activeMapMode}', '${G.activeMapNode}')">再试一次 ↺</button>`;
+                }
+                if (!win && G.isReview) {
+                    rb.innerHTML += `<button class="btn btn-red" onclick="startReviewLevel(getReviewWords())">再试一次 ↺</button>`;
+                }
+                rb.innerHTML += `<button class="btn btn-cyan" onclick="backToMap()">返回完整地图</button>`;
+            } else if (G.isReview) {
                 rb.innerHTML += `<button class="btn btn-cyan" onclick="go('s-enter')">返回学生中心</button>`;
             } else {
-                if (win && G.lvIdx + 1 < lvls.length) rb.innerHTML += `<button class="btn btn-red" onclick="startLevel(${G.lvIdx + 1})">下一关 ▶</button>`;
-                if (!win) rb.innerHTML += `<button class="btn btn-red" onclick="startLevel(${G.lvIdx})">再来一次 ↺</button>`;
+                if (win && G.lvIdx + 1 < lvls.length) rb.innerHTML += `<button class="btn btn-red" onclick="startLevel(${G.lvIdx + 1}, 'balanced', '')">下一关 ▶</button>`;
+                if (!win) rb.innerHTML += `<button class="btn btn-red" onclick="startLevel(${G.lvIdx}, 'balanced', '')">再来一次 ↺</button>`;
                 rb.innerHTML += `<button class="btn btn-cyan" onclick="backToMap()">关卡地图</button>`;
             }
             go('s-result');
@@ -2394,7 +3895,7 @@
             const wrap = document.getElementById('lb-wrap'), filter = document.getElementById('lb-class-filter');
             if (filter.innerHTML === "") {
                 const { data: cls } = await vqClient.from('classes').select('*');
-                filter.innerHTML = `<option value="">-- 全校特训总榜 --</option>` + (cls || []).map(c => `<option value="${c.id}">${c.name}</option>`).join('');
+                filter.innerHTML = `<option value="">-- 全校特训总榜 --</option>` + (cls || []).map(c => `<option value="${c.id}">${escH(c.name)}</option>`).join('');
             }
             wrap.innerHTML = '<div style="text-align:center;color:var(--cyan);padding:30px;font-family:var(--px);font-size:var(--fs-px-xs);">📡 正在获取云端排行...</div>';
 
@@ -2410,7 +3911,7 @@
                 if (prErr) throw prErr;
 
                 const userXpMap = {};
-                progresses?.forEach(p => { const xp = p.prog_data?.xp || 0; userXpMap[p.user_id] = (userXpMap[p.user_id] || 0) + xp; });
+                progresses?.forEach(p => { const xp = Number(p.prog_data?.xp) || 0; userXpMap[p.user_id] = (userXpMap[p.user_id] || 0) + xp; });
 
                 window._lbProfiles = profiles.map(prof => ({ name: prof.full_name || '匿名', xp: userXpMap[prof.id] || 0 }));
                 renderLbContent();
@@ -2432,7 +3933,7 @@
                     return `<div class="lb-row ${i < 3 ? 'top3' : ''}">
                             <span class="lb-rank ${clsNm[i] || ''}">${medals[i] || (i + 1)}</span>
                             <div class="lb-nm">
-                                <div class="lb-nm-name">${e.name}</div>
+                                <div class="lb-nm-name">${escH(e.name)}</div>
                                 <div class="lb-nm-pack" style="color:${tObj.color};">${tObj.title} · LV.${lvInfo.lv}</div>
                             </div>
                             <div style="text-align:right;"><div class="lb-sc">${e.xp} XP</div></div>
@@ -2447,7 +3948,7 @@
                     <div class="lb-row ${i < 3 ? 'top3' : ''}">
                         <span class="lb-rank ${clsNm[i] || ''}">${medals[i] || (i + 1)}</span>
                         <div class="lb-nm">
-                            <div class="lb-nm-name">${e.name}</div>
+                            <div class="lb-nm-name">${escH(e.name)}</div>
                             <div class="lb-nm-pack" style="color:${e.tObj.color};">${e.tObj.title}</div>
                         </div>
                         <div style="text-align:right;">
@@ -2466,6 +3967,8 @@
         function flashFX(type) { const el = document.getElementById('flash-el'); el.className = 'flash ' + (type === 'ok' ? 'ok-flash' : 'err-flash'); setTimeout(() => el.className = 'flash', 500); }
         function animMon() { const el = document.getElementById('mon-em'); el.classList.remove('float-anim', 'hurt-anim'); void el.offsetWidth; el.classList.add('hurt-anim'); setTimeout(() => { el.classList.remove('hurt-anim'); el.classList.add('float-anim'); }, 550); }
         function spawnDmg(val, type) { const el = document.createElement('div'); el.className = `dmgnum ${type}`; el.textContent = `-${val}`; const m = document.getElementById('mon-em').getBoundingClientRect(); el.style.left = (m.left + m.width / 2 - 16) + 'px'; el.style.top = m.top + 'px'; document.body.appendChild(el); setTimeout(() => el.remove(), 1000); }
+        function escH(s){return String(s??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]))}
+        function escQ(s){return String(s??'').replace(/\\/g,'\\\\').replace(/'/g,"\\'").replace(/[\r\n]/g,' ')}
         function toast(msg, type = 'ok') { const el = document.createElement('div'); el.className = `toast ${type}`; el.textContent = msg; document.body.appendChild(el); setTimeout(() => el.remove(), 2600); }
         function openModal(id) { document.getElementById(id).classList.add('open'); }
         function closeModal(id) { document.getElementById(id).classList.remove('open'); }
@@ -2496,11 +3999,45 @@
         });
 
         // ════ 启动时恢复上一次的界面 ════
-        window.onload = () => {
+        window.onload = async () => {
+            // 先检查 Supabase session，自动同步登录状态
+            try {
+                const { data: { session } } = await vqClient.auth.getSession();
+                if (session) {
+                    const uid = session.user.id;
+                    const { data: profile } = await vqClient.from('profiles').select('*, classes(name)').eq('id', uid).maybeSingle();
+                    if (profile) {
+                        localStorage.setItem('vq_uid', uid);
+                        localStorage.setItem('vq_unm', profile.full_name || session.user.email.split('@')[0]);
+                        G.userId = uid;
+                        G.name = profile.full_name || localStorage.getItem('vq_unm');
+                        G.classId = profile.class_id || '';
+                    }
+                } else {
+                    localStorage.removeItem('vq_uid');
+                    localStorage.removeItem('vq_unm');
+                    G.userId = ''; G.name = ''; G.classId = '';
+                }
+            } catch(e) { console.warn('Session sync:', e); }
+            const resumePackId = new URLSearchParams(location.search).get('resumePack');
+            if (resumePackId && G.userId) {
+                try {
+                    const { data: resumePack } = await vqClient.from('word_packs').select('*').eq('id', resumePackId).maybeSingle();
+                    if (resumePack) {
+                        G.selPack = resumePack;
+                        history.replaceState({}, '', location.pathname);
+                        await startGameCloud();
+                        return;
+                    }
+                } catch (error) {
+                    console.warn('恢复学习地图失败:', error);
+                }
+            }
             const lastScreen = sessionStorage.getItem('last_screen') || 's-title';
             go(lastScreen);
         };
     </script>
+    <script src="./story-adventure.js"></script>
 </body>
 
 </html>

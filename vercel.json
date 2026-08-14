@@ -1,5 +1,17 @@
 {
+  "functions": {
+    "api/ai.js": {
+      "maxDuration": 10
+    },
+    "api/story.js": {
+      "maxDuration": 180
+    }
+  },
   "redirects": [
-    { "source": "/", "destination": "/landing.html", "permanent": false }
+    {
+      "source": "/",
+      "destination": "/landing.html",
+      "permanent": false
+    }
   ]
 }
